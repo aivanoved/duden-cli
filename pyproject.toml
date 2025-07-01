@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backen = "hatchling.build"
+
+[project]
+name = "duden_sdk"
+description = "An sdk for Duden API"
+authors = [
+    { name = "Alexander Ivanov", email = "alexander.valentinov.ivanov@gmail.com" }
+]
+maintaners = [
+    { name = "Alexander Ivanov", email = "alexander.valentinov.ivanov@gmail.com" }
+]
+readme = "README.md"
+dynamic = ["version"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.13",
+]
+requires-python = ">=3.13"
+
+[project.urls]
+repository = "https://github.com/aivanoved/duden_sdk"

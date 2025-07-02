@@ -154,8 +154,6 @@ class Definition(Parse):
             if "Beispiel" in e.find("dt").contents[0]
         ]
 
-        print(examples)
-
         if len(examples) == 0:
             return None
 
@@ -176,17 +174,19 @@ class Definition(Parse):
 
     @classmethod
     def _multi_def(cls, multi_def) -> Self | None:
+        definitions = multi_def.find_all("li", id=re.compile("Bedeutung*"))
+
         defs = [
             clean_contents(e.find("div", {"class": "enumeration__text"}))
-            for e in multi_def.find_all("li", id=re.compile("Bedeutung*"))
+            for e in definitions
         ]
 
-        print(f"{defs=}")
+        examples = [cls._get_examples(e) for e in definitions]
 
-        definitions: list[SingleMeaning] = list()
-        # definitions.append(SingleMeaning(meaning, examples or None))
+        if len(defs) != len(examples):
+            raise ValueError()
 
-        return cls(definitions)
+        return cls([SingleMeaning(dfn, exs) for dfn, exs in zip(defs, examples)])  # type: ignore
 
     @classmethod
     @override
@@ -200,9 +200,7 @@ class Definition(Parse):
         multi_def = article.find("div", id="bedeutungen")
 
         if multi_def:
-            # print(f"{definitions=}")
-            # raise NotImplementedError()
-            pass
+            return cls._multi_def(multi_def)
 
         return None
 

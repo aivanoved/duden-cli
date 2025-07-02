@@ -34,7 +34,22 @@ pip = "*"
 hatchling = "*"
 hatch-vcs = "*"
 
+[feature.lint.dependencies]
+docformatter = "*"
+ruff = "*"
+prettier = "*"
+taplo = "*"
+pre-commit-hooks = "*"
+typos = "*"
+pre-commit = ">=4.2.0,<5"
+mypy = ">=1.16.1,<2"
+
+[feature.lint.tasks]
+pre-commit-install = "pre-commit install"
+pre-commit-run = "pre-commit run -a"
+
 [environments]
 default = { features = ["test", "build"], solve-group = "default" }
 test = { features = ["test"], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
+lint = { features = ["lint", "build"], no-default-feature = true }

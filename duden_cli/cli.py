@@ -2,7 +2,11 @@ import typer
 
 from duden_cli.definition import Word, definition
 
-cli = typer.Typer()
+kwargs = {
+    "pretty_exceptions_enable": False,
+}
+
+cli = typer.Typer(**kwargs)
 
 
 @cli.command()

@@ -1,5 +1,9 @@
 from dataclasses import dataclass
 from enum import Enum
+import itertools
+import re
+from statistics import mean
+import unicodedata
 import typer
 import httpx
 import bs4 as bs
@@ -7,9 +11,12 @@ from typing import Any, Self, cast, override
 
 cli = typer.Typer()
 
+def clean_contents(element) -> list:
+    return [e for e in element.contents if e != '\n']
+
 class Parse:
     @classmethod
-    def parse_tag(cls, tag) -> Self | None:
+    def parse_tag(cls, article) -> Self | None:
         raise NotImplementedError()
 
     @classmethod
@@ -43,11 +50,12 @@ class WordType(Parse, Enum):
 
     @classmethod
     @override
-    def parse_tag(cls, tag) -> Self | None:
-        if 'Wortart' not in str(tag.find('dt').contents[0]):
+    def parse_tag(cls, article) -> Self | None:
+        word_type_tags = [tag for tag in article.find_all('dl') if 'Wortart' in str(tag.find('dt').contents[0])]
+        if len(word_type_tags) == 0:
             return None
 
-        contents = cast(str, [e for e in tag.find('dd').contents if e != '\n'][-1])
+        contents = [e for e in word_type_tags[0].find('dd').contents if e != '\n'][-1]
 
         match contents:
             case "Substantiv, maskulin":
@@ -79,11 +87,12 @@ class Pronunciation(Parse):
 
     @classmethod
     @override
-    def parse_tag(cls, tag) -> Self | None:
-        if 'Aussprache' not in str(tag.find('dt').contents[0]):
+    def parse_tag(cls, article) -> Self | None:
+        pronunciation_tags = [tag for tag in article.find_all('dl') if 'Aussprache' in str(tag.find('dt').contents[0])]
+        if len(pronunciation_tags) == 0:
             return None
 
-        contents = [e for e in tag.find('dd').contents if e != '\n'][-1]
+        contents = [e for e in pronunciation_tags[0].find('dd').contents if e != '\n'][-1]
 
         ipas: list[str] = list()
         guides: list[list[str]] = list()
@@ -114,12 +123,45 @@ class Pronunciation(Parse):
 
 
 @dataclass
+class SingleMeaning:
+    meaning: str
+    examples: list[str] | None = None
+
+@dataclass
+class Definition(Parse):
+    definitions: list[SingleMeaning]
+
+    @classmethod
+    @override
+    def parse_tag(cls, article) -> Self | None:
+        single_def = article.find('div', id='bedeutung')
+
+        if not single_def:
+            raise NotImplementedError()
+
+        meaning = cast(str, single_def.find('p').contents[0])
+        examples = [clean_contents(e.find('dd'))[0].find_all('li') for e in single_def.find_all('dl') if 'Beispiel' in e.find('dt').contents[0]]
+        examples = [unicodedata.normalize('NFC', cast(str, clean_contents(e)[0])).replace(u'\xa0', u' ') for e in itertools.chain(*examples)]
+
+        definitions: list[SingleMeaning] = list()
+        definitions.append(SingleMeaning(meaning, examples or None))
+
+        print(f"{definitions=}")
+
+        return cls(definitions)
+
+    @classmethod
+    @override
+    def id_name(cls) -> str:
+        return "definition"
+
+@dataclass
 class Word:
     word_type: WordType
     pronunciation: Pronunciation
 
 
-components: list[Parse] = [Pronunciation, WordType]
+# components: list[Parse] = [Pronunciation, WordType]
 
 
 @cli.command()
@@ -130,25 +172,12 @@ def meaning(word: str) -> str:
 
     article = list(soup.find_all('article'))[0]
 
-    dl = list(article.find_all('dl'))
+    pronunciation = Pronunciation.parse_tag(article)
+    word_type = WordType.parse_tag(article)
+    definition = Definition.parse_tag(article)
 
-    parsed: list[str] = list()
-
-    for l in dl:
-        success = False
-        for component in components:
-            if component.id_name() in parsed:
-                break
-            parsed_obj = component.parse_tag(l)
-            if parsed_obj is not None and parsed_obj.id_name() not in parsed:
-                print(f"{parsed_obj=}")
-                parsed.append(parsed_obj.id_name())
-                success = True
-                break
-
-        # if not success:
-        #     print(f"{l=}")
-        #     print()
+    print(f"{pronunciation=}")
+    print(f"{word_type=}")
 
     return response.text
 

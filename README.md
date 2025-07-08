@@ -1,3 +1,3 @@
-# Duden SDK
+# Duden cli
 
-An sdk for the Duden API
+An cli for the Duden API

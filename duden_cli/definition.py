@@ -99,7 +99,10 @@ class WordType(Parse, Enum):
                 return cls(cls.IRREGULAR_VERB)
             case "Partikel":
                 return cls(cls.PARTICLE)
+            case "Interjektion":
+                return cls(cls.INTERJECTION)
             case _:
+                print(contents)
                 raise NotImplementedError()
 
     @override

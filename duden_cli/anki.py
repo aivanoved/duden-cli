@@ -1,0 +1,37 @@
+import datetime
+import random
+
+import genanki
+
+
+def generate_valid_id() -> int:
+    return random.randrange(1 << 30, 1 << 31)
+
+
+MODEL_ID = 1923456780
+DECK_ID = generate_valid_id()
+
+model = genanki.Model(
+    model_id=MODEL_ID,
+    name="Simple German Model",
+    fields=[
+        {"name": "Word"},
+        {"name": "Definition"},
+    ],
+    templates=[
+        {
+            "name": "Simple German Definition",
+            "qfmt": "{{Word}}",
+            "afmt": '{{Word}}<hr id="answer">{{Definition}}',
+        },
+        {
+            "name": "Simple German Explain",
+            "qfmt": "{{Definition}}",
+            "afmt": '{{Definition}}<hr id="answer">{{Word}}',
+        },
+    ],
+)
+
+DATETIME_SUFFIX = datetime.datetime.now().strftime("%d %B %Y %H:%M:%S")
+
+deck = genanki.Deck(deck_id=DECK_ID, name=f"German {DATETIME_SUFFIX}")

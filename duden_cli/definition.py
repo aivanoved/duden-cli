@@ -302,7 +302,7 @@ def definition(word: str) -> Word | None:
 
     if response.status_code != 200:
         log.error("unsuccessful")
-        return None
+        raise ValueError(f"'{word}' was not found or has multiple entries")
 
     soup = bs.BeautifulSoup(response.text, "html.parser")
 

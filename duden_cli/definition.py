@@ -1,3 +1,4 @@
+import os
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -6,9 +7,18 @@ from typing import Self, cast, override
 
 import bs4 as bs
 import httpx
+import structlog
 from markdownify import markdownify as md
 
+log = structlog.get_logger()
+
 URL = "https://www.duden.de/rechtschreibung/{word}"
+
+
+def terminal_width() -> int:
+    size = os.get_terminal_size()
+
+    return size.columns
 
 
 def clean_contents(element) -> list:
@@ -257,13 +267,20 @@ class Word:
 
         table.align = "l"
 
-        table.max_width = 90
+        table.max_width = terminal_width() // 2
 
         return table.get_string()
 
 
 def definition(word: str) -> Word | None:
+    log.info("getting the definition of the word '%s'", word)
+
     response = httpx.get(URL.format(word=word))
+
+    log.info("got", response=response)
+
+    if response.status_code != 200:
+        log.error("unsuccessful")
 
     soup = bs.BeautifulSoup(response.text, "html.parser")
 

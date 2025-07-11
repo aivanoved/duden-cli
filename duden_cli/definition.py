@@ -90,30 +90,36 @@ class WordType(Parse, Enum):
             str, [e for e in word_type_tags[0].find("dd").contents if e != "\n"][-1]
         )
 
+        output = None
+
         match contents:
             case "Substantiv, maskulin":
-                return cls(cls.NOUN_MASCULINE)
+                output = cls(cls.NOUN_MASCULINE)
             case "Substantiv, feminin":
-                return cls(cls.NOUN_FEMININE)
+                output = cls(cls.NOUN_FEMININE)
             case "Substantiv, Neutrum":
-                return cls(cls.NOUN_NEUTRAL)
+                output = cls(cls.NOUN_NEUTRAL)
             case "Adjektiv":
-                return cls(cls.ADJECTIVE)
+                output = cls(cls.ADJECTIVE)
             case "Adverb":
-                return cls(cls.ADVERB)
+                output = cls(cls.ADVERB)
             case "schwaches Verb":
-                return cls(cls.WEAK_VERB)
+                output = cls(cls.WEAK_VERB)
             case "starkes Verb":
-                return cls(cls.STRONG_VERB)
+                output = cls(cls.STRONG_VERB)
             case "unregelmäßiges Verb":
-                return cls(cls.IRREGULAR_VERB)
+                output = cls(cls.IRREGULAR_VERB)
             case "Partikel":
-                return cls(cls.PARTICLE)
+                output = cls(cls.PARTICLE)
             case "Interjektion":
-                return cls(cls.INTERJECTION)
+                output = cls(cls.INTERJECTION)
             case _:
-                print(contents)
+                log.error("unable to decode", word_type=contents)
                 raise NotImplementedError()
+
+        log.debug("decoded object", word_type=output)
+
+        return output
 
     @override
     def __str__(self: Self) -> str:
@@ -153,7 +159,11 @@ class Pronunciation(Parse):
             elif class_ == "pronunciation-guide__text":
                 guides.append("".join([normal_markdown(e) for e in clean_contents(s)]))
 
-        return cls(stress=(guides or [""])[0], ipa=(ipas or [""])[0])
+        output = cls(stress=(guides or [""])[0], ipa=(ipas or [""])[0])
+
+        log.debug("decoded object", pronunciation=output)
+
+        return output
 
     @classmethod
     @override
@@ -195,7 +205,11 @@ class Definition(Parse):
         definitions: list[SingleMeaning] = list()
         definitions.append(SingleMeaning(meaning, cls._get_examples(single_def)))
 
-        return cls(definitions)
+        output = cls(definitions)
+
+        log.debug("decoded object", definition=output)
+
+        return output
 
     @classmethod
     def _multi_def(cls, multi_def) -> Self | None:
@@ -213,7 +227,11 @@ class Definition(Parse):
 
         defs_str = ["".join(clean_tag(def_element) for def_element in e) for e in defs]
 
-        return cls([SingleMeaning(dfn, exs) for dfn, exs in zip(defs_str, examples)])  # type: ignore
+        output = cls([SingleMeaning(dfn, exs) for dfn, exs in zip(defs_str, examples)])  # type: ignore
+
+        log.debug("decoded object", definition=output)
+
+        return output
 
     @classmethod
     @override
@@ -229,6 +247,7 @@ class Definition(Parse):
         if multi_def:
             return cls._multi_def(multi_def)
 
+        log.debug("unable to decode", definition=None)
         return None
 
     @classmethod
@@ -267,7 +286,7 @@ class Word:
 
         table.align = "l"
 
-        table.max_width = terminal_width() // 2
+        table.max_table_width = terminal_width() - 1
 
         return table.get_string()
 
@@ -281,12 +300,13 @@ def definition(word: str) -> Word | None:
 
     if response.status_code != 200:
         log.error("unsuccessful")
+        return None
 
     soup = bs.BeautifulSoup(response.text, "html.parser")
 
-    pronunciation = Pronunciation.parse_tag(soup)
     word_type = WordType.parse_tag(soup)
     definition = Definition.parse_tag(soup)
+    pronunciation = Pronunciation.parse_tag(soup)
 
     if definition is None:
         return None
@@ -297,9 +317,5 @@ def definition(word: str) -> Word | None:
         word_type=word_type,
         pronunciation=pronunciation,
     )
-
-    output_str = str(output)
-
-    print(output_str)
 
     return output

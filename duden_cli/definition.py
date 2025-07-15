@@ -9,6 +9,7 @@ import bs4 as bs
 import httpx
 import structlog
 from markdownify import markdownify as md
+from prettytable import PrettyTable
 
 log = structlog.get_logger()
 
@@ -259,14 +260,41 @@ class Definition(Parse):
 
 
 @dataclass
+class Grammar(Parse):
+    word_type: WordType | None
+    grammar: str | list[str] | None
+
+    @classmethod
+    @override
+    def parse_tag(cls, soup: bs.BeautifulSoup) -> Self | None:
+        article = list(soup.find_all("article"))[0]
+
+        word_type = WordType.parse_tag(soup)
+
+        grammar = article.find("div", id="grammatik")
+        if grammar is None:
+            log.debug("unable to decode", definition=None)
+            return None
+
+        return cls(
+            word_type=word_type,
+            grammar="",
+        )
+
+    @classmethod
+    @override
+    def id_name(cls) -> str:
+        return "grammar"
+
+
+@dataclass
 class Word:
     word: str
     definition: Definition
-    word_type: WordType | None
+    grammar: Grammar | None
     pronunciation: Pronunciation | None
 
-    @override
-    def __str__(self: Self) -> str:
+    def meaning_table(self: Self) -> str:
         data = [
             [
                 e.meaning,
@@ -277,8 +305,6 @@ class Word:
             for e in self.definition.definitions
         ]
 
-        from prettytable import PrettyTable
-
         table = PrettyTable()
         table.field_names = ["Bedeutung", "Beispiel(e)"]
 
@@ -287,7 +313,41 @@ class Word:
             table.add_divider()
 
         table.align = "l"
+        table.add_autoindex()
+        table.max_table_width = terminal_width() - 1
 
+        return table.get_string()
+
+    def grammar_table(self: Self) -> str:
+        table = PrettyTable()
+        table.field_names = ["Grammar", ""]
+
+        if self.grammar is None:
+            return table.get_string()
+
+        match self.grammar.word_type:
+            case WordType.NOUN_MASCULINE:
+                table.add_row(["Worttyp", "Substantiv"])
+                table.add_divider()
+                table.add_row(["Artikel", "der"])
+            case WordType.NOUN_FEMININE:
+                table.add_row(["Worttyp", "Substantiv"])
+                table.add_divider()
+                table.add_row(["Artikel", "die"])
+            case WordType.NOUN_NEUTRAL:
+                table.add_row(["Worttyp", "Substantiv"])
+                table.add_divider()
+                table.add_row(["Artikel", "das"])
+            case WordType.WEAK_VERB:
+                table.add_row(["Worttyp", "Verb, schwaches"])
+            case WordType.STRONG_VERB:
+                table.add_row(["Worttyp", "Verb, starkes"])
+            case WordType.IRREGULAR_VERB:
+                table.add_row(["Worttyp", "Verb, unregelmäßiges"])
+            case _:
+                pass
+
+        table.align = "l"
         table.max_table_width = terminal_width() - 1
 
         return table.get_string()
@@ -306,7 +366,7 @@ def definition(word: str) -> Word | None:
 
     soup = bs.BeautifulSoup(response.text, "html.parser")
 
-    word_type = WordType.parse_tag(soup)
+    grammar = Grammar.parse_tag(soup)
     definition = Definition.parse_tag(soup)
     pronunciation = Pronunciation.parse_tag(soup)
 
@@ -316,7 +376,7 @@ def definition(word: str) -> Word | None:
     output = Word(
         word=word,
         definition=definition,
-        word_type=word_type,
+        grammar=grammar,
         pronunciation=pronunciation,
     )
 

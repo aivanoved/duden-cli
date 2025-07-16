@@ -55,21 +55,22 @@ class WordType(Parse, Enum):
     NOUN_MASCULINE = 0
     NOUN_FEMININE = 1
     NOUN_NEUTRAL = 2
-    ADJECTIVE = 3
-    ADVERB = 4
-    WEAK_VERB = 5
-    STRONG_VERB = 6
-    IRREGULAR_VERB = 7
-    ARTICLE = 8
-    PROPER_NOUN = 9
-    INTERJECTION = 10
-    CONJUNCTION = 11
-    PARTICLE = 12
-    PREFIX = 13
-    PREPOSITION = 14
-    PRONOUN = 15
-    SUFFIX = 16
-    NUMERAL = 17
+    NOUN_MASCULINE_NEUTRAL = 3
+    ADJECTIVE = 4
+    ADVERB = 5
+    WEAK_VERB = 6
+    STRONG_VERB = 7
+    IRREGULAR_VERB = 8
+    ARTICLE = 9
+    PROPER_NOUN = 10
+    INTERJECTION = 11
+    CONJUNCTION = 12
+    PARTICLE = 13
+    PREFIX = 14
+    PREPOSITION = 15
+    PRONOUN = 16
+    SUFFIX = 17
+    NUMERAL = 18
 
     @classmethod
     @override
@@ -102,6 +103,8 @@ class WordType(Parse, Enum):
                 output = cls(cls.NOUN_FEMININE)
             case "Substantiv, Neutrum":
                 output = cls(cls.NOUN_NEUTRAL)
+            case "Substantiv, maskulin, oder Substantiv, Neutrum":
+                output = cls(cls.NOUN_MASCULINE_NEUTRAL)
             case "Adjektiv":
                 output = cls(cls.ADJECTIVE)
             case "Adverb":
@@ -346,6 +349,10 @@ class Word:
                 table.add_row(["Worttyp", "Substantiv"])
                 table.add_divider()
                 table.add_row(["Artikel", "das"])
+            case WordType.NOUN_MASCULINE_NEUTRAL:
+                table.add_row(["Worttyp", "Substantiv"])
+                table.add_divider()
+                table.add_row(["Artikel", "der oder das"])
             case WordType.WEAK_VERB:
                 table.add_row(["Worttyp", "Verb, schwaches"])
             case WordType.STRONG_VERB:

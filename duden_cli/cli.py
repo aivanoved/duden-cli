@@ -27,11 +27,36 @@ def hint_from_definition(definition: SingleMeaning) -> str:
             [f"{word} /{idx}/" for idx, word in enumerate(defined)],
         )
     )
-    idx = int(
-        input(f"Enter the number of the hint word or -1 for no hint: {enumerated}\n")
-    )
 
-    return f"/{defined[idx]}/" if idx != -1 else ""
+    input_ = None
+
+    while input_ is None:
+        print(f"Definition: {enumerated}")
+
+        input_ = input("Enter the number of the hint word, s for skip, n for new: ")
+        input_ = input_.strip().lower()
+        if not (input_.isalpha() or input_.isdecimal()):
+            input_ = None
+        elif input_.isdecimal() and (int(input_) >= len(defined) or int(input_) < 0):
+            print(f"Specified number outside of length: {len(defined)}")
+            input_ = None
+        elif input_.isalpha() and input_ not in ["s", "n"]:
+            print("Must be one of s or n")
+            input_ = None
+
+    hint = ""
+
+    if input_.isdecimal():
+        idx = int(input_)
+        hint = "".join(e for e in defined[idx].strip() if e.isalpha())
+    elif input_.isalpha():
+        match input_:
+            case "s":
+                hint = ""
+            case "n":
+                hint = input("Enter a hint: ").strip()
+
+    return f"/{hint}/" if hint != "" else hint
 
 
 @cli.command()
@@ -97,6 +122,11 @@ def gen_deck() -> None:
                     grammar_list.append(f"die {plural}")
 
                 grammar = ", ".join(grammar_list)
+            elif output.grammar.word_type is WordType.NOUN_MASCULINE_NEUTRAL:
+                grammar_list = ["Artikel - der oder das"]
+                plural = get_plural(output.grammar.grammar)
+                if plural:
+                    grammar_list.append(f"die {plural}")
             elif output.grammar.word_type in [
                 WordType.WEAK_VERB,
                 WordType.STRONG_VERB,

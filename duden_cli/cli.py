@@ -86,51 +86,34 @@ def gen_deck() -> None:
             hint = None
             if len(output.definition.definitions) > 1:
                 hint = hint or hint_from_definition(def_)
-
-            def get_plural(grammar: str | list[str] | None) -> str | None:
-                if isinstance(grammar, list):
-                    grammar = ([None] + [g for g in grammar if "Plural" in g])[
-                        -1
-                    ]
-                if isinstance(grammar, str):
-                    if "Plural: die" in grammar:
-                        return (
-                            grammar.split("Plural: die")[1]
-                            .strip()
-                            .lstrip()
-                            .split()[0]
-                            .strip()
-                        )
-
-                return None
-
             grammar = None
+
             if output.grammar is None:
                 grammar = None
             elif output.grammar.word_type is WordType.NOUN_MASCULINE:
                 grammar_list = ["Artikel - der"]
-                plural = get_plural(output.grammar.grammar)
+                plural = output.get_plural()
                 if plural:
                     grammar_list.append(f"die {plural}")
 
                 grammar = ", ".join(grammar_list)
             elif output.grammar.word_type is WordType.NOUN_FEMININE:
                 grammar_list = ["Artikel - die"]
-                plural = get_plural(output.grammar.grammar)
+                plural = output.get_plural()
                 if plural:
                     grammar_list.append(f"die {plural}")
 
                 grammar = ", ".join(grammar_list)
             elif output.grammar.word_type is WordType.NOUN_NEUTRAL:
                 grammar_list = ["Artikel - das"]
-                plural = get_plural(output.grammar.grammar)
+                plural = output.get_plural()
                 if plural:
                     grammar_list.append(f"die {plural}")
 
                 grammar = ", ".join(grammar_list)
             elif output.grammar.word_type is WordType.NOUN_MASCULINE_NEUTRAL:
                 grammar_list = ["Artikel - der oder das"]
-                plural = get_plural(output.grammar.grammar)
+                plural = output.get_plural()
                 if plural:
                     grammar_list.append(f"die {plural}")
             elif output.grammar.word_type in [
@@ -144,9 +127,49 @@ def gen_deck() -> None:
                 elif isinstance(_grammar, list):
                     grammar = ", ".join(_grammar)
 
+            example = None
+            answer = input("Add example y/n: ").strip().lower()
+            while answer != "y" and answer != "n":
+                answer = input("Add example y/n: ").strip().lower()
+
+            if answer == "y":
+                print(def_.example_table())
+                answer = (
+                    input(
+                        "Enter the number of the example, s for skip, n for new: "
+                    )
+                    .strip()
+                    .lower()
+                )
+
+                match answer:
+                    case "n":
+                        example = input("Enter an example: ")
+                    case answer.isnumeric():
+                        if (
+                            def_.examples is not None
+                            and len(def_.examples) > 0
+                        ):
+                            idx = int(answer)
+                            while idx < 0 or idx >= len(def_.examples):
+                                idx = int(
+                                    input(
+                                        f"Enter a number between 0 and {len(def_.examples - 1)}: "  # type: ignore
+                                    )
+                                )
+                            example = def_.examples[idx]
+                    case _:
+                        pass
+
             note = genanki.Note(
                 model=anki.model,
-                fields=[output.word, def_.meaning, hint or "", grammar or ""],
+                fields=[
+                    output.word,
+                    def_.meaning,
+                    hint or "",
+                    grammar or "",
+                    example or "",
+                ],
             )
 
             anki.deck.add_note(note)

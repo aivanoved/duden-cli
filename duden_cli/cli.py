@@ -33,11 +33,15 @@ def hint_from_definition(definition: SingleMeaning) -> str:
     while input_ is None:
         print(f"Definition: {enumerated}")
 
-        input_ = input("Enter the number of the hint word, s for skip, n for new: ")
+        input_ = input(
+            "Enter the number of the hint word, s for skip, n for new: "
+        )
         input_ = input_.strip().lower()
         if not (input_.isalpha() or input_.isdecimal()):
             input_ = None
-        elif input_.isdecimal() and (int(input_) >= len(defined) or int(input_) < 0):
+        elif input_.isdecimal() and (
+            int(input_) >= len(defined) or int(input_) < 0
+        ):
             print(f"Specified number outside of length: {len(defined)}")
             input_ = None
         elif input_.isalpha() and input_ not in ["s", "n"]:
@@ -85,7 +89,9 @@ def gen_deck() -> None:
 
             def get_plural(grammar: str | list[str] | None) -> str | None:
                 if isinstance(grammar, list):
-                    grammar = ([None] + [g for g in grammar if "Plural" in g])[-1]
+                    grammar = ([None] + [g for g in grammar if "Plural" in g])[
+                        -1
+                    ]
                 if isinstance(grammar, str):
                     if "Plural: die" in grammar:
                         return (
@@ -147,7 +153,9 @@ def gen_deck() -> None:
 
         word = input("Ask for word (q for quit): ")
 
-    genanki.Package(anki.deck).write_to_file(f"Deutsch {anki.DATETIME_SUFFIX}.apkg")
+    genanki.Package(anki.deck).write_to_file(
+        f"Deutsch {anki.DATETIME_SUFFIX}.apkg"
+    )
 
 
 if __name__ == "__main__":

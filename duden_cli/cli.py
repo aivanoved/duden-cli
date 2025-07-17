@@ -142,24 +142,21 @@ def gen_deck() -> None:
                     .lower()
                 )
 
-                match answer:
-                    case "n":
-                        example = input("Enter an example: ")
-                    case answer.isnumeric():
-                        if (
-                            def_.examples is not None
-                            and len(def_.examples) > 0
-                        ):
-                            idx = int(answer)
-                            while idx < 0 or idx >= len(def_.examples):
-                                idx = int(
-                                    input(
-                                        f"Enter a number between 0 and {len(def_.examples - 1)}: "  # type: ignore
-                                    )
-                                )
-                            example = def_.examples[idx]
-                    case _:
-                        pass
+                if answer == "n":
+                    example = input("Enter an example: ")
+                elif (
+                    answer.isnumeric()
+                    and def_.examples is not None
+                    and len(def_.examples) > 0
+                ):
+                    idx = int(answer)
+                    while idx <= 0 or idx >= len(def_.examples):
+                        idx = int(
+                            input(
+                                f"Enter a number between 1 and {len(def_.examples)}: "  # type: ignore
+                            )
+                        )
+                    example = def_.examples[idx - 1]
 
             note = genanki.Note(
                 model=anki.model,

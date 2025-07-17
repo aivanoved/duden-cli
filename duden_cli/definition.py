@@ -202,6 +202,7 @@ class SingleMeaning:
             table.add_row([example])
 
         table.align = "l"
+        table.add_autoindex()
         table.max_table_width = terminal_width() - 1
 
         return table.get_string()

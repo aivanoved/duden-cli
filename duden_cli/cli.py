@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 from typing import cast
 
@@ -6,6 +7,10 @@ import typer
 from rich.console import Console
 
 from duden_cli.definition import SingleMeaning, WordType, definition
+
+structlog.configure(
+    wrapper_class=structlog.make_filtering_bound_logger(logging.ERROR)
+)
 
 log = structlog.get_logger()
 
@@ -23,7 +28,7 @@ def selector(
 
     def condition(_answer: str | None) -> bool:
         if _answer is None:
-            return False
+            return True
 
         result = len(variants_str) > 0 and not any(
             _answer == e for e in variants_str

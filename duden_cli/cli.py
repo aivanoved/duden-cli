@@ -2,12 +2,15 @@ from collections.abc import Callable
 
 import structlog
 import typer
+from rich.console import Console
 
 from duden_cli.definition import SingleMeaning, WordType, definition
 
 log = structlog.get_logger()
 
 cli = typer.Typer(pretty_exceptions_enable=False)
+
+console = Console()
 
 
 def selector(
@@ -29,8 +32,8 @@ def selector(
 def meaning(word: str) -> None:
     output = definition(word)
     if output:
-        print(output.grammar_table())
-        print(output.meaning_table())
+        console.print(output.grammar_table())
+        console.print(output.meaning_table())
 
 
 def hint_from_definition(definition: SingleMeaning) -> str:
@@ -44,7 +47,7 @@ def hint_from_definition(definition: SingleMeaning) -> str:
     input_ = None
 
     while input_ is None:
-        print(f"Definition: {enumerated}")
+        console.print(f"Definition: {enumerated}")
 
         input_ = selector(
             "Enter the number of the hint word, s for skip, n for new: ",
@@ -56,10 +59,12 @@ def hint_from_definition(definition: SingleMeaning) -> str:
         elif input_.isdecimal() and (
             int(input_) >= len(defined) or int(input_) < 0
         ):
-            print(f"Specified number outside of length: {len(defined)}")
+            console.print(
+                f"Specified number outside of length: {len(defined)}"
+            )
             input_ = None
         elif input_.isalpha() and input_ not in ["s", "n"]:
-            print("Must be one of s or n")
+            console.print("Must be one of s or n")
             input_ = None
 
     hint = ""
@@ -147,7 +152,7 @@ def gen_deck() -> None:
                 answer = input("Add example y/n: ").strip().lower()
 
             if answer == "y":
-                print(def_.example_table())
+                console.print(def_.example_table())
                 answer = (
                     input(
                         "Enter the number of the example, s for skip, n for new: "

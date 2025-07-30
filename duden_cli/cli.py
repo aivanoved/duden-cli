@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import cast
 
 import structlog
 import typer
@@ -17,15 +18,27 @@ def selector(
     description: str, variants: list[str | Callable[[str], bool]]
 ) -> str:
     answer = None
-    variants_check: list[Callable[[str], bool]] = [
-        lambda x: x == e.lower() if isinstance(e, str) else e  # type: ignore
-        for e in variants
-    ]
-    while answer is None or not any(
-        check_variant(answer) for check_variant in variants_check
-    ):
-        answer = input(f"{description}:").strip().lower()
-    return answer
+    variants_str = [e for e in variants if isinstance(e, str)]
+    variants_callable = [e for e in variants if not isinstance(e, str)]
+
+    def condition(_answer: str | None) -> bool:
+        if _answer is None:
+            return False
+
+        result = len(variants_str) > 0 and not any(
+            _answer == e for e in variants_str
+        )
+        result = result or (
+            len(variants_callable) > 0
+            and not any(check(_answer) for check in variants_callable)
+        )
+
+        return result
+
+    while condition(answer):
+        answer = input(f"{description}: ").strip().lower()
+
+    return cast(str, answer)
 
 
 @cli.command()
@@ -50,7 +63,7 @@ def hint_from_definition(definition: SingleMeaning) -> str:
         console.print(f"Definition: {enumerated}")
 
         input_ = selector(
-            "Enter the number of the hint word, s for skip, n for new: ",
+            "Enter the number of the hint word, s for skip, n for new",
             ["s", "n"],
         )
         input_ = input_.strip().lower()

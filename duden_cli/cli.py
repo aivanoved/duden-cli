@@ -1,6 +1,6 @@
 import logging
-from collections.abc import Callable
-from typing import cast
+from copy import deepcopy
+from typing import Final, TypeVar, cast, override
 
 import structlog
 import typer
@@ -18,32 +18,76 @@ cli = typer.Typer(pretty_exceptions_enable=False)
 
 console = Console()
 
+T = TypeVar("T")
 
-def selector(
-    description: str, variants: list[str | Callable[[str], bool]]
-) -> str:
+
+def safe_list(items: T | list[T]) -> list[T]:
+    if not isinstance(items, list):
+        return [items]
+    return items
+
+
+class SelectorOptions[T]:
+    def __init__(self, options: T | list[T], *, hint: str | None = None):
+        self.options: Final = safe_list(deepcopy(options))
+        self._str_options: Final = [str(e) for e in self.options]
+
+        if hint is None:
+            _hint: str = ", ".join(self._str_options)
+        else:
+            _hint = hint
+
+        self.hint: Final = _hint
+
+    def check_input(self, to_check: str) -> bool:
+        return any(to_check == e for e in self._str_options)
+
+    def cast(self, to_cast: str) -> T | None:
+        raise NotImplementedError
+
+
+class SelectorOptionsInt(SelectorOptions[int]):
+    @override
+    def cast(self, to_cast: str) -> int | None:
+        if not self.check_input(to_cast):
+            return None
+        return int(to_cast)
+
+
+class SelectorOptionsStr(SelectorOptions[str]):
+    @override
+    def cast(self, to_cast: str) -> str | None:
+        if not self.check_input(to_cast):
+            return None
+        return to_cast
+
+
+def selector[T](description: str, *variants: SelectorOptions[T]) -> T:
     answer = None
-    variants_str = [e for e in variants if isinstance(e, str)]
-    variants_callable = [e for e in variants if not isinstance(e, str)]
 
-    def condition(_answer: str | None) -> bool:
+    def condition(_answer: str | None) -> T | None:
         if _answer is None:
-            return True
+            return None
+        options = [None]
+        options += [
+            variant.cast(_answer)
+            for variant in variants
+            if variant.check_input(_answer)
+        ]
+        return options[-1]
 
-        result = len(variants_str) > 0 and not any(
-            _answer == e for e in variants_str
+    answer = None
+    while answer is None:
+        answer = condition(
+            input(
+                description
+                + " "
+                + ", ".join(variant.hint for variant in variants)
+                + ": "
+            ).strip()
         )
-        result = result or (
-            len(variants_callable) > 0
-            and not any(check(_answer) for check in variants_callable)
-        )
 
-        return result
-
-    while condition(answer):
-        answer = input(f"{description}: ").strip().lower()
-
-    return cast(str, answer)
+    return answer
 
 
 @cli.command()
@@ -58,39 +102,33 @@ def hint_from_definition(definition: SingleMeaning) -> str:
     defined = definition.meaning.split()
     enumerated = " ".join(
         list(
-            [f"{word} /{idx}/" for idx, word in enumerate(defined)],
+            [f"{word} /{idx + 1}/" for idx, word in enumerate(defined)],
         )
+    )
+
+    variants = SelectorOptionsStr(["s", "n"], hint="s for skip, n for new")
+    variants_int = SelectorOptionsInt(
+        list(range(len(defined))), hint=f"1..{len(defined)}"
     )
 
     input_ = None
 
-    while input_ is None:
-        console.print(f"Definition: {enumerated}")
+    console.print(f"Definition: {enumerated}")
 
-        input_ = selector(
-            "Enter the number of the hint word, s for skip, n for new",
-            ["s", "n"],
-        )
-        input_ = input_.strip().lower()
-        if not (input_.isalpha() or input_.isdecimal()):
-            input_ = None
-        elif input_.isdecimal() and (
-            int(input_) >= len(defined) or int(input_) < 0
-        ):
-            console.print(
-                f"Specified number outside of length: {len(defined)}"
-            )
-            input_ = None
-        elif input_.isalpha() and input_ not in ["s", "n"]:
-            console.print("Must be one of s or n")
-            input_ = None
+    input_ = cast(
+        str | int,
+        selector(
+            "Enter the number of the hint word",
+            variants,
+            variants_int,
+        ),
+    )
 
     hint = ""
 
-    if input_.isdecimal():
-        idx = int(input_)
-        hint = "".join(e for e in defined[idx].strip() if e.isalpha())
-    elif input_.isalpha():
+    if isinstance(input_, int):
+        hint = "".join(e for e in defined[input_ - 1].strip() if e.isalpha())
+    else:
         match input_:
             case "s":
                 hint = ""
@@ -170,30 +208,26 @@ def gen_deck() -> None:
                 answer = input("Add example y/n: ").strip().lower()
 
             if answer == "y":
-                console.print(def_.example_table())
-                answer = (
-                    input(
-                        "Enter the number of the example, s for skip, n for new: "
-                    )
-                    .strip()
-                    .lower()
+                example_table = def_.example_table()
+                num_rows = example_table.row_count
+                console.print(example_table)
+                answer = cast(
+                    str | int,
+                    selector(
+                        "Enter the number of the example",
+                        SelectorOptionsStr(
+                            ["s", "n"], hint="s for skip, n for new"
+                        ),
+                        SelectorOptionsInt(
+                            list(range(num_rows)), hint=f"1..{num_rows}"
+                        ),
+                    ),
                 )
 
                 if answer == "n":
                     example = input("Enter an example: ")
-                elif (
-                    answer.isnumeric()
-                    and def_.examples is not None
-                    and len(def_.examples) > 0
-                ):
-                    idx = int(answer)
-                    while idx <= 0 or idx - 1 >= len(def_.examples):
-                        idx = int(
-                            input(
-                                f"Enter a number between 1 and {len(def_.examples)}: "  # type: ignore
-                            )
-                        )
-                    example = def_.examples[idx - 1]
+                elif isinstance(answer, int) and def_.examples is not None:
+                    example = def_.examples[answer - 1]
 
             note = genanki.Note(
                 model=anki.model,

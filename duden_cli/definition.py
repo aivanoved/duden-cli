@@ -1,18 +1,18 @@
 import os
-import re
 import unicodedata
 from dataclasses import dataclass
 from enum import Enum
 from typing import Self, cast, override
 
 import bs4 as bs
-import httpx
 import structlog
 from markdownify import markdownify as md
 from rich.console import Console
 from rich.table import Table
 
-from duden_cli.layout.rechtschreibung import rechtschreibung
+from duden_cli.layout.rechtschreibung import (
+    rechtschreibung,
+)
 
 log = structlog.get_logger()
 
@@ -50,17 +50,7 @@ def normal_markdown(element) -> str:
     )
 
 
-class Parse:
-    @classmethod
-    def parse_tag(cls, soup: bs.BeautifulSoup) -> Self | None:
-        raise NotImplementedError()
-
-    @classmethod
-    def id_name(cls) -> str:
-        raise NotImplementedError()
-
-
-class WordType(Parse, Enum):
+class WordType(Enum):
     NOUN_MASCULINE = 0
     NOUN_FEMININE = 1
     NOUN_NEUTRAL = 2
@@ -82,33 +72,10 @@ class WordType(Parse, Enum):
     NUMERAL = 18
 
     @classmethod
-    @override
-    def id_name(cls) -> str:
-        return "word_type"
-
-    @classmethod
-    @override
-    def parse_tag(cls, soup: bs.BeautifulSoup) -> Self | None:
-        article = list(soup.find_all("article"))[0]
-
-        word_type_tags = [
-            tag
-            for tag in article.find_all("dl")
-            if "Wortart" in str(tag.find("dt").contents[0])
-        ]
-        if len(word_type_tags) == 0:
-            return None
-
-        contents = cast(
-            str,
-            [e for e in word_type_tags[0].find("dd").contents if e != "\n"][
-                -1
-            ],
-        )
-
-        output = None
-
-        match contents:
+    def parse(cls, word_type: str | None) -> Self | None:
+        match word_type:
+            case None:
+                return None
             case "Substantiv, maskulin":
                 output = cls(cls.NOUN_MASCULINE)
             case "Substantiv, feminin":
@@ -134,7 +101,7 @@ class WordType(Parse, Enum):
             case "Artikel":
                 output = cls(cls.ARTICLE)
             case _:
-                log.error("unable to decode", word_type=contents)
+                log.error("unable to decode", word_type=word_type)
                 raise NotImplementedError()
 
         log.debug("decoded object", word_type=output)
@@ -147,50 +114,13 @@ class WordType(Parse, Enum):
 
 
 @dataclass
-class Pronunciation(Parse):
+class Pronunciation:
     stress: str
     ipa: str
 
     @classmethod
-    @override
-    def parse_tag(cls, soup: bs.BeautifulSoup) -> Self | None:
-        article = list(soup.find_all("article"))[0]
-
-        pronunciation_tags = [
-            tag
-            for tag in article.find_all("dl")
-            if "Aussprache" in str(tag.find("dt").contents[0])
-        ]
-        if len(pronunciation_tags) == 0:
-            return None
-
-        contents = [
-            e for e in pronunciation_tags[0].find("dd").contents if e != "\n"
-        ][-1]
-
-        ipas: list[str] = list()
-        guides: list[str] = list()
-
-        spans = contents.find_all("span")
-        for s in spans:
-            class_ = s["class"][0]
-            if class_ == "ipa":
-                ipas.append(unicodedata.normalize("NFC", clean_contents(s)[0]))
-            elif class_ == "pronunciation-guide__text":
-                guides.append(
-                    "".join([normal_markdown(e) for e in clean_contents(s)])
-                )
-
-        output = cls(stress=(guides or [""])[0], ipa=(ipas or [""])[0])
-
-        log.debug("decoded object", pronunciation=output)
-
-        return output
-
-    @classmethod
-    @override
-    def id_name(cls) -> str:
-        return "pronunciation"
+    def parse_tag(cls, text: str) -> Self | None:
+        return cls("", "")
 
 
 @dataclass
@@ -209,131 +139,20 @@ class SingleMeaning:
 
 
 @dataclass
-class Definition(Parse):
+class Definition:
     definitions: list[SingleMeaning]
-
-    @classmethod
-    def _get_examples(cls, definition) -> list[str] | None:
-        examples = [
-            clean_contents(e.find("dd"))[0].find_all("li")
-            for e in definition.find_all("dl")
-            if "Beispiel" in e.find("dt").contents[0]
-        ]
-
-        if len(examples) == 0:
-            return None
-
-        examples = [
-            normal_markdown("".join(map(str, clean_contents(e))))
-            for e in examples[0]
-        ]
-
-        return examples or None
-
-    @classmethod
-    def _single_def(cls, single_def) -> Self | None:
-        meaning = cast(str, single_def.find("p").contents[0])
-
-        definitions: list[SingleMeaning] = list()
-        definitions.append(
-            SingleMeaning(meaning, cls._get_examples(single_def))
-        )
-
-        output = cls(definitions)
-
-        log.debug("decoded object", definition=output)
-
-        return output
-
-    @classmethod
-    def _multi_def(cls, multi_def) -> Self | None:
-        definitions = multi_def.find_all("li", id=re.compile("Bedeutung*"))
-
-        defs = [
-            clean_contents(e.find("div", {"class": "enumeration__text"}))
-            for e in definitions
-        ]
-
-        examples = [cls._get_examples(e) for e in definitions]
-
-        if len(defs) != len(examples):
-            raise ValueError()
-
-        defs_str = [
-            "".join(clean_tag(def_element) for def_element in e) for e in defs
-        ]
-
-        output = cls(
-            [SingleMeaning(dfn, exs) for dfn, exs in zip(defs_str, examples)]
-        )  # type: ignore
-
-        log.debug("decoded object", definition=output)
-
-        return output
-
-    @classmethod
-    @override
-    def parse_tag(cls, soup: bs.BeautifulSoup) -> Self | None:
-        article = list(soup.find_all("article"))[0]
-
-        single_def = article.find("div", id="bedeutung")
-        if single_def:
-            return cls._single_def(single_def)
-
-        multi_def = article.find("div", id="bedeutungen")
-
-        if multi_def:
-            return cls._multi_def(multi_def)
-
-        log.debug("unable to decode", definition=None)
-        return None
-
-    @classmethod
-    @override
-    def id_name(cls) -> str:
-        return "definition"
 
 
 @dataclass
-class Grammar(Parse):
+class Grammar:
     word_type: WordType | None
     grammar: str | list[str] | None
-
-    @classmethod
-    @override
-    def parse_tag(cls, soup: bs.BeautifulSoup) -> Self | None:
-        article = list(soup.find_all("article"))[0]
-
-        word_type = WordType.parse_tag(soup)
-
-        if word_type is None:
-            log.debug("unable to decode", word_type=None)
-            return None
-
-        grammar = None
-        _grammar = article.find("div", id="grammatik")
-        if _grammar is None:
-            log.debug("unable to decode", grammar=None)
-        else:
-            _grammar = _grammar.find_all("p")
-            if len(_grammar) > 0:
-                grammar = _grammar[0].contents
-
-        return cls(
-            word_type=word_type,
-            grammar=grammar,
-        )
-
-    @classmethod
-    @override
-    def id_name(cls) -> str:
-        return "grammar"
 
 
 @dataclass
 class Word:
     word: str
-    definition: Definition
+    definitions: Definition
     grammar: Grammar | None
     pronunciation: Pronunciation | None
 
@@ -371,7 +190,7 @@ class Word:
         table.add_column("Bedeutung", justify="left")
         table.add_column("Beispiel(e)", justify="left")
 
-        for e in self.definition.definitions:
+        for e in self.definitions.definitions:
             examples = "\n".join(
                 f"{i + 1}. {example}"
                 for i, example in enumerate(e.examples or [])
@@ -431,7 +250,9 @@ class Word:
         )
         table.add_column("Beispiel(e)", justify="left")
 
-        for example in self.definition.definitions[meaning].examples or list():
+        for example in (
+            self.definitions.definitions[meaning].examples or list()
+        ):
             table.add_row(example)
 
         return table
@@ -440,37 +261,26 @@ class Word:
 def definition(word: str) -> Word | None:
     log.info("getting the definition of the word '%s'", word)
 
-    response = httpx.get(DEFINITION_URL.format(word=word))
-    _ = rechtschreibung(word)
+    layout = rechtschreibung(word)
 
-    log.info("got", response=response)
-
-    if response.status_code != 200:
+    if layout is None:
         log.error("unsuccessful")
         raise ValueError(f"'{word}' was not found or has multiple entries")
 
-    soup = bs.BeautifulSoup(response.text, "html.parser")
+    word = layout.hinweis.word
+    _definitions = layout.bedeutungen or []
 
-    word_contents = soup.find("div", {"class": "lemma"}).find_all("span")[0]
-    word = "".join(
-        unicodedata.normalize("NFC", e.replace("\xad", ""))
-        for e in word_contents.contents
+    definitions = Definition(
+        [SingleMeaning(e.bedeutung, e.beispiele) for e in _definitions]
     )
 
-    log.info("The word is", word=word)
-
-    grammar = Grammar.parse_tag(soup)
-    definition = Definition.parse_tag(soup)
-    pronunciation = Pronunciation.parse_tag(soup)
-
-    if definition is None:
-        return None
+    grammar = Grammar(WordType.parse(layout.hinweis.word_type), None)
 
     output = Word(
         word=word,
-        definition=definition,
+        definitions=definitions,
         grammar=grammar,
-        pronunciation=pronunciation,
+        pronunciation=None,
     )
 
     return output

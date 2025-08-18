@@ -11,7 +11,7 @@ from duden_cli.layout.html import (
     clean_page_elements,
     clean_text,
     delete_a_rule,
-    dl,
+    dl_split,
     normalize_text,
     strip_a_lexeme,
     strip_italic,
@@ -33,7 +33,7 @@ def terminal_width() -> int:
 def _extract_dl(soup: bs.BeautifulSoup) -> list[tuple[str, bs.Tag]]:
     return list(
         map(
-            dl,
+            dl_split,
             [cast(bs.BeautifulSoup, _dl) for _dl in soup.find_all(name="dl")],
         )
     )
@@ -51,9 +51,14 @@ class Hinweis:
         return cls(word, None, None, None)
 
     def wordtype_from_tag(self, tag: bs.Tag | None) -> Self:
+        if tag is None:
+            return self
+
+        word_type = "".join(clean_text(e) for e in tag.contents)
+
         return self.__class__(
             self.word,
-            cast(str, tag.contents[0]) if tag is not None else None,
+            word_type,
             self.frequency,
             self.pronunciation,
         )
@@ -113,7 +118,7 @@ class Hinweis:
             .text,
         )
 
-        wfp = _extract_dl(cast(bs.BeautifulSoup, article))[:3]
+        wfp = _extract_dl(cast(bs.BeautifulSoup, article))
 
         word_type = (
             [e[1] for e in wfp if e[0].startswith("Wortart")] or [None]
@@ -303,5 +308,7 @@ def rechtschreibung(query: str) -> RechtschreibungLayout | None:
         herkunft=None,
         grammatik=None,
     )
+
+    # pprint(layout)
 
     return layout

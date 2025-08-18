@@ -90,6 +90,14 @@ def delete_a_rule(element: PageElement) -> PageElementPreprocessorOutput:
     return False, [element]
 
 
+def delete_a_icon(element: PageElement) -> PageElementPreprocessorOutput:
+    if isinstance(element, bs.Tag):
+        attrs = element.get_attribute_list("class")
+        return (True, None) if "tuple__icon" in attrs else (False, [element])
+
+    return False, [element]
+
+
 def strip_a_lexeme(element: PageElement) -> PageElementPreprocessorOutput:
     default_output = False, [element]
     if not isinstance(element, bs.Tag):
@@ -137,8 +145,20 @@ def clean_text(
     return "".join(str(e) for e in simple_element)
 
 
-def dl(element: bs.BeautifulSoup) -> tuple[str, bs.Tag]:
-    dl_type = "".join(clean_text(str(e)) for e in element.find(name="dt"))
+def dl_split(element: bs.BeautifulSoup) -> tuple[str, bs.Tag]:
+    dl_type = "".join(
+        clean_text(
+            e,
+            preprocessors=[
+                strip_span,
+                strip_italic,
+                strip_a_lexeme,
+                delete_a_rule,
+                delete_a_icon,
+            ],
+        )
+        for e in cast(bs.Tag, element.find(name="dt"))
+    )
     dl_value = cast(bs.Tag, element.find(name="dd"))
 
     return dl_type, dl_value

@@ -212,7 +212,9 @@ class Definition(Parse):
 
 @dataclass
 class Word:
+    word: str
     word_type: WordType
+    definition: Definition
     pronunciation: Pronunciation
 
 
@@ -225,11 +227,9 @@ def definition(word: str) -> Word | None:
     word_type = WordType.parse_tag(soup)
     definition = Definition.parse_tag(soup)
 
-    print(f"{pronunciation=}")
-    print(f"{word_type=}")
-    print(f"{definition=}")
 
     if any(map(lambda e: e is None, [pronunciation, word_type])):
         return None
 
-    return Word(word_type, pronunciation)  # type: ignore
+
+    return Word(word=word, word_type=word_type, definition=definition, pronunciation=pronunciation)  # type: ignore

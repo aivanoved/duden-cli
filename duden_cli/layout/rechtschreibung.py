@@ -181,7 +181,8 @@ class Rechtschreibung:
         ]
 
         examples = "".join(
-            clean_text(e, preprocessors=preprocessors) for e in tag.contents
+            clean_text(e, preprocessors=preprocessors)  # type: ignore
+            for e in tag.contents
         ).split(";")
         examples = [e.strip() for e in examples]
 
@@ -225,7 +226,7 @@ class Meaning:
 
         examples = [
             "".join(
-                normalize_text(clean_text(e, preprocessors=preprocessors))
+                normalize_text(clean_text(e, preprocessors=preprocessors))  # type: ignore
                 for e in cast(bs.Tag, example).contents
             )
             for example in values_unordered_list.find_all("li")
@@ -250,7 +251,7 @@ class Meaning:
 
         meaning = normalize_text(
             "".join(
-                clean_text(e, preprocessors=preprocessors)
+                clean_text(e, preprocessors=preprocessors)  # type: ignore
                 for e in meaning_tag.contents
             )
         )
@@ -272,7 +273,10 @@ class Meaning:
             ),
         )
 
-        _meanings = [(cls.from_single(e) or [None])[0] for e in li_items]
+        _meanings = [
+            (cast(list[Self | None], cls.from_single(e)) or [None])[0]
+            for e in li_items
+        ]
 
         return [e for e in _meanings if e is not None] or None
 

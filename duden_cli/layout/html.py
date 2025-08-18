@@ -64,7 +64,11 @@ def _html_delete_a(
         and matching_content is None
     ):
         return True, None
-    elif isinstance(element, bs.Tag) and element.name == "a":
+    elif (
+        isinstance(element, bs.Tag)
+        and element.name == "a"
+        and matching_content is not None
+    ):
         text = normalize_text("".join(str(e) for e in element.contents))
         match = matching_content.match(text)
         return (True, None) if match is not None else (False, [element])

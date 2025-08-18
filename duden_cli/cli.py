@@ -68,7 +68,7 @@ def selector[T](description: str, *variants: SelectorOptions[T]) -> T:
     def condition(_answer: str | None) -> T | None:
         if _answer is None:
             return None
-        options = [None]
+        options: list[T | None] = [None]
         options += [
             variant.cast(_answer)
             for variant in variants
@@ -117,7 +117,7 @@ def hint_from_definition(definition: SingleMeaning) -> str:
 
     input_ = cast(
         str | int,
-        selector(
+        selector(  # type: ignore
             "Enter the number of the hint word",
             variants,
             variants_int,
@@ -203,7 +203,7 @@ def gen_deck() -> None:
                     grammar = ", ".join(_grammar)
 
             example = None
-            answer = input("Add example y/n: ").strip().lower()
+            answer: str | int = input("Add example y/n: ").strip().lower()
             while answer != "y" and answer != "n":
                 answer = input("Add example y/n: ").strip().lower()
 
@@ -213,7 +213,7 @@ def gen_deck() -> None:
                 console.print(example_table)
                 answer = cast(
                     str | int,
-                    selector(
+                    selector(  # type: ignore
                         "Enter the number of the example",
                         SelectorOptionsStr(
                             ["s", "n"], hint="s for skip, n for new"

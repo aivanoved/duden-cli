@@ -170,8 +170,6 @@ class Definition(Parse):
         definitions: list[SingleMeaning] = list()
         definitions.append(SingleMeaning(meaning, examples or None))
 
-        print(f"{definitions=}")
-
         return cls(definitions)
 
     @classmethod
@@ -180,31 +178,15 @@ class Definition(Parse):
         article = list(soup.find_all("article"))[0]
 
         single_def = article.find("div", id="bedeutung")
+        if single_def:
+            return cls._single_def(single_def)
 
-        if not single_def:
+        multi_def = article.find("div", id="bedeutungen")
+        if single_def:
+            print(f"{multi_def=}")
             raise NotImplementedError()
 
-        meaning = cast(str, single_def.find("p").contents[0])
-        examples = [
-            clean_contents(e.find("dd"))[0].find_all("li")
-            for e in single_def.find_all("dl")
-            if "Beispiel" in e.find("dt").contents[0]
-        ]
-        examples = [
-            md(
-                unicodedata.normalize(
-                    "NFC", "".join(map(str, clean_contents(e)))
-                ).replace("\xa0", " ")
-            )
-            for e in itertools.chain(*examples)
-        ]
-
-        definitions: list[SingleMeaning] = list()
-        definitions.append(SingleMeaning(meaning, examples or None))
-
-        print(f"{definitions=}")
-
-        return cls(definitions)
+        return None
 
     @classmethod
     @override

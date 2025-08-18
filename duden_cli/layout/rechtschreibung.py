@@ -5,8 +5,16 @@ from typing import Self, cast
 import bs4 as bs
 import httpx
 import structlog
+from bs4.element import PageElement
 
-from duden_cli.layout.html import clean_page_elements, dl, normalize_text
+from duden_cli.layout.html import (
+    clean_page_elements,
+    delete_a,
+    dl,
+    normalize_text,
+    strip_italic,
+    strip_span,
+)
 
 log = structlog.get_logger()
 
@@ -134,8 +142,6 @@ class Rechtschreibung:
 
         main_div = article.find("div", attrs={"id": "rechtschreibung"})
 
-        log.debug(f"{main_div=}")
-
         he = _extract_dl(cast(bs.BeautifulSoup, main_div))
 
         log.debug(f"{he=}")
@@ -164,6 +170,29 @@ class Rechtschreibung:
     def examples_from_tag(self, tag: bs.Tag | None) -> Self:
         if tag is None:
             return self
+
+        log.debug(f"{tag.contents=}")
+
+        simple_contents = tag.contents
+
+        preprocessors = [strip_span, strip_italic, delete_a]
+
+        processed = True
+
+        while processed:
+            processed = False
+
+            for processor in preprocessors:
+                processed_elements = [processor(e) for e in simple_contents]
+
+                processed = processed or any(e[0] for e in processed_elements)
+
+                simple_contents = sum(
+                    (e[1] for e in processed_elements if e[1] is not None),
+                    cast(list[PageElement], list()),
+                )
+
+        log.debug(f"{simple_contents=}")
 
         return self
 

@@ -138,7 +138,7 @@ def clean_text(
 
 
 def dl(element: bs.BeautifulSoup) -> tuple[str, bs.Tag]:
-    dl_type = cast(str, element.find(name="dt").contents[0])
+    dl_type = "".join(clean_text(str(e)) for e in element.find(name="dt"))
     dl_value = cast(bs.Tag, element.find(name="dd"))
 
     return dl_type, dl_value

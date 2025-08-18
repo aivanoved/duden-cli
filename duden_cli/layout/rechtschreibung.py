@@ -1,4 +1,5 @@
 import os
+import re
 from dataclasses import dataclass
 from typing import Self, cast
 
@@ -33,10 +34,7 @@ def _extract_dl(soup: bs.BeautifulSoup) -> list[tuple[str, bs.Tag]]:
     return list(
         map(
             dl,
-            [
-                cast(bs.BeautifulSoup, _dl)
-                for _dl in soup.find_all(name="dl", attrs={"class": "tuple"})
-            ],
+            [cast(bs.BeautifulSoup, _dl) for _dl in soup.find_all(name="dl")],
         )
     )
 
@@ -201,19 +199,15 @@ class Bedeutung:
         if single_div is not None:
             return cls.from_single(cast(bs.Tag, single_div))
 
+        multi_div = article.find("div", attrs={"id": "bedeutungen"})
         if multi_div is not None:
-            return cls.from_many(cast(bs.Tag, single_div))
+            return cls.from_many(cast(bs.Tag, multi_div))
 
         return None
 
     def examples_from_tag(self, tag: bs.Tag | None) -> Self:
         if tag is None:
             return self
-
-        if tag.name != "dl":
-            return self
-
-        dt = cast(bs.Tag, tag.find("dt"))
 
         preprocessors = [
             strip_span,
@@ -222,15 +216,7 @@ class Bedeutung:
             strip_a_lexeme,
         ]
 
-        dt_type = "".join(
-            clean_text(e, preprocessors=preprocessors) for e in dt.contents
-        )
-
-        if "Beispiel" not in dt_type:
-            return self
-
-        values_tag = cast(bs.Tag, tag.find("dd"))
-        values_unordered_list = cast(bs.Tag, values_tag.find("ul"))
+        values_unordered_list = cast(bs.Tag, tag.find("ul"))
 
         examples = [
             "".join(clean_text(e, preprocessors=preprocessors))
@@ -250,9 +236,13 @@ class Bedeutung:
             delete_a_rule,
             strip_a_lexeme,
         ]
+
         meaning_tag = cast(bs.Tag | None, tag.find("p"))
         if meaning_tag is None:
             meaning_tag = cast(bs.Tag | None, tag.find("div"))
+        if meaning_tag is None:
+            return None
+
         meaning = "".join(
             clean_text(e, preprocessors=preprocessors)
             for e in meaning_tag.contents
@@ -267,17 +257,17 @@ class Bedeutung:
         return [cls(meaning, None, None, None).examples_from_tag(examples_tag)]
 
     @classmethod
-    def from_many(cls, tag: bs.Tag) -> list[Self]:
-        preprocessors = [
-            strip_span,
-            strip_italic,
-            delete_a_rule,
-            strip_a_lexeme,
-        ]
+    def from_many(cls, tag: bs.Tag) -> list[Self] | None:
+        li_items = cast(
+            list[bs.Tag],
+            tag.find("ol").find_all(
+                "li", attrs={"id": re.compile(r"Bedeutung*")}
+            ),
+        )
 
-        li_tags: list[bs.Tag] = list()
+        _meanings = [(cls.from_single(e) or [None])[0] for e in li_items]
 
-        raise NotImplementedError()
+        return [e for e in _meanings if e is not None] or None
 
 
 @dataclass
@@ -295,8 +285,6 @@ def rechtschreibung(query: str) -> RechtschreibungLayout | None:
 
     response = httpx.get(RECHTSCHREIBUNG_URL.format(word=query))
 
-    log.debug("got", response=response)
-
     if response.status_code != 200:
         log.error("unsuccessful")
         raise ValueError(f"'{query}' was not found or has multiple entries")
@@ -307,10 +295,6 @@ def rechtschreibung(query: str) -> RechtschreibungLayout | None:
     rechtschreib = Rechtschreibung.from_soup(soup)
     bedeutungen = Bedeutung.from_soup(soup)
 
-    log.debug(f"{hinweis=}")
-    log.debug(f"{rechtschreib=}")
-    log.debug(f"{bedeutungen=}")
-
     layout = RechtschreibungLayout(
         hinweis=hinweis,
         rechtschreibung=rechtschreib,
@@ -319,7 +303,5 @@ def rechtschreibung(query: str) -> RechtschreibungLayout | None:
         herkunft=None,
         grammatik=None,
     )
-
-    log.debug(f"{layout=}")
 
     return layout

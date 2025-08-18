@@ -15,8 +15,9 @@ cli = typer.Typer(**kwargs)
 @cli.command()
 def meaning(word: str) -> None:
     output = definition(word)
-
-    print(output)
+    if output:
+        print(output.grammar_table())
+        print(output.meaning_table())
 
 
 def hint_from_definition(definition: SingleMeaning) -> str:

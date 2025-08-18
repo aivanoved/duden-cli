@@ -22,6 +22,7 @@ markdownify = ">=0.14.1,<0.15"
 prettytable = ">=3.16.0,<4"
 structlog = ">=25.4.0,<26"
 genanki = ">=0.13.1,<0.14"
+rich = ">=14.1.0,<15"
 
 
 [feature.test.dependencies]

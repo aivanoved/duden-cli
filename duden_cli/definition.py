@@ -9,9 +9,12 @@ import bs4 as bs
 import httpx
 import structlog
 from markdownify import markdownify as md
-from prettytable import PrettyTable
+from rich.console import Console
+from rich.table import Table
 
 log = structlog.get_logger()
+
+console = Console()
 
 DUDEN_BASE_URL = "https://www.duden.de"
 DEFINITION_URL = f"{DUDEN_BASE_URL}/rechtschreibung/{{word}}"
@@ -191,21 +194,14 @@ class SingleMeaning:
     meaning: str
     examples: list[str] | None = None
 
-    def example_table(self) -> str:
-        table = PrettyTable()
-
-        table.field_names = ["Beispiel(e)"]
+    def example_table(self) -> Table:
+        table = Table(title="Beispiel(e)", show_lines=True)
+        table.add_column("Beispiel(e)", justify="left")
 
         for example in self.examples or list():
-            if len(table.rows) > 0:
-                table.add_divider()
-            table.add_row([example])
+            table.add_row(example)
 
-        table.align = "l"
-        table.add_autoindex()
-        table.max_table_width = terminal_width() - 1
-
-        return table.get_string()
+        return table
 
 
 @dataclass
@@ -366,101 +362,75 @@ class Word:
 
         return None
 
-    def meaning_table(self: Self) -> str:
-        data = [
-            [
-                e.meaning,
-                "\n".join(
-                    f"{i + 1}. {example}"
-                    for i, example in enumerate(e.examples or [])
-                ),
-            ]
-            for e in self.definition.definitions
-        ]
+    def meaning_table(self: Self) -> Table:
+        table = Table(title=f"Bedeutung(en) von {self.word}", show_lines=True)
+        table.add_column("Bedeutung", justify="left")
+        table.add_column("Beispiel(e)", justify="left")
 
-        table = PrettyTable()
-        table.field_names = [f"Bedeutung von {self.word}", "Beispiel(e)"]
+        for e in self.definition.definitions:
+            examples = "\n".join(
+                f"{i + 1}. {example}"
+                for i, example in enumerate(e.examples or [])
+            )
+            table.add_row(e.meaning, examples)
 
-        for row in data:
-            table.add_row(row)
-            table.add_divider()
+        return table
 
-        table.align = "l"
-        table.add_autoindex()
-        table.max_table_width = terminal_width() - 1
-
-        return table.get_string()
-
-    def grammar_table(self: Self) -> str:
-        table = PrettyTable()
-        table.field_names = ["Grammatik", self.word]
+    def grammar_table(self: Self) -> Table:
+        table = Table(title="Grammatik", show_lines=True)
+        table.add_column("Grammatik", justify="left")
+        table.add_column(self.word, justify="left")
 
         if self.grammar is None:
-            return table.get_string()
+            return table
 
         match self.grammar.word_type:
             case WordType.NOUN_MASCULINE:
-                table.add_row(["Worttyp", "Substantiv"])
-                table.add_divider()
-                table.add_row(["Artikel", "der"])
+                table.add_row("Worttyp", "Substantiv")
+                table.add_row("Artikel", "der")
             case WordType.NOUN_FEMININE:
-                table.add_row(["Worttyp", "Substantiv"])
-                table.add_divider()
-                table.add_row(["Artikel", "die"])
+                table.add_row("Worttyp", "Substantiv")
+                table.add_row("Artikel", "die")
             case WordType.NOUN_NEUTRAL:
-                table.add_row(["Worttyp", "Substantiv"])
-                table.add_divider()
-                table.add_row(["Artikel", "das"])
+                table.add_row("Worttyp", "Substantiv")
+                table.add_row("Artikel", "das")
             case WordType.NOUN_MASCULINE_NEUTRAL:
-                table.add_row(["Worttyp", "Substantiv"])
-                table.add_divider()
-                table.add_row(["Artikel", "der oder das"])
+                table.add_row("Worttyp", "Substantiv")
+                table.add_row("Artikel", "der oder das")
             case WordType.WEAK_VERB:
-                table.add_row(["Worttyp", "Verb, schwaches"])
+                table.add_row("Worttyp", "Verb, schwaches")
             case WordType.STRONG_VERB:
-                table.add_row(["Worttyp", "Verb, starkes"])
+                table.add_row("Worttyp", "Verb, starkes")
             case WordType.IRREGULAR_VERB:
-                table.add_row(["Worttyp", "Verb, unregelmäßiges"])
+                table.add_row("Worttyp", "Verb, unregelmäßiges")
             case WordType.ADJECTIVE:
-                table.add_row(["Worttyp", "Adjektiv"])
+                table.add_row("Worttyp", "Adjektiv")
             case WordType.ADVERB:
-                table.add_row(["Worttyp", "Adverb"])
+                table.add_row("Worttyp", "Adverb")
             case _:
                 pass
 
         if self.grammar.grammar is not None:
             grammar = self.grammar.grammar
             if isinstance(grammar, str):
-                if len(table.rows) > 0:
-                    table.add_divider()
-                table.add_row(["Other", grammar])
+                table.add_row("Other", grammar)
             else:
                 for grammar_row in grammar:
-                    if len(table.rows) > 0:
-                        table.add_divider()
-                    table.add_row(["Other", grammar_row])
+                    table.add_row("Other", grammar_row)
 
-        table.align = "l"
-        table.max_table_width = terminal_width() - 1
+        return table
 
-        return table.get_string()
-
-    def example_table(self, *, meaning: int = 0) -> str:
-        table = PrettyTable()
-
-        table.field_names = [
-            f"Beispiel(e) für {self.word} mit Bedeutung {meaning + 1}"
-        ]
+    def example_table(self, *, meaning: int = 0) -> Table:
+        table = Table(
+            f"Beispiel(e) für {self.word} mit Bedeutung {meaning + 1}",
+            show_lines=True,
+        )
+        table.add_column("Beispiel(e)", justify="left")
 
         for example in self.definition.definitions[meaning].examples or list():
-            if len(table.rows) > 0:
-                table.add_divider()
-            table.add_row([example])
+            table.add_row(example)
 
-        table.align = "l"
-        table.max_table_width = terminal_width() - 1
-
-        return table.get_string()
+        return table
 
 
 def definition(word: str) -> Word | None:

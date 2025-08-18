@@ -3,7 +3,7 @@ from enum import Enum
 import typer
 import httpx
 import bs4 as bs
-from typing import Any, Self, override
+from typing import Any, Self, cast, override
 
 cli = typer.Typer()
 
@@ -20,6 +20,21 @@ class WordType(Parse, Enum):
     NOUN_MASCULINE = 0
     NOUN_FEMININE = 1
     NOUN_NEUTRAL = 2
+    ADJECTIVE = 3
+    ADVERB = 4
+    WEAK_VERB = 5
+    STRONG_VERB = 6
+    IRREGULAR_VERB = 7
+    ARTICLE = 8
+    PROPER_NOUN = 9
+    INTERJECTION = 10
+    CONJUNCTION = 11
+    PARTICLE = 12
+    PREFIX = 13
+    PREPOSITION = 14
+    PRONOUN = 15
+    SUFFIX = 16
+    NUMERAL = 17
 
     @classmethod
     @override
@@ -32,10 +47,29 @@ class WordType(Parse, Enum):
         if 'Wortart' not in str(tag.find('dt').contents[0]):
             return None
 
-        print("parsing word type")
+        contents = cast(str, [e for e in tag.find('dd').contents if e != '\n'][-1])
 
-        contents = [e for e in tag.find('dd').contents if e != '\n'][-1]
-        print(f"{contents=}")
+        match contents:
+            case "Substantiv, maskulin":
+                return cls(cls.NOUN_MASCULINE)
+            case "Substantiv, feminin":
+                return cls(cls.NOUN_FEMININE)
+            case "Substantiv, Neutrum":
+                return cls(cls.NOUN_NEUTRAL)
+            case "Adjektiv":
+                return cls(cls.ADJECTIVE)
+            case "Adverb":
+                return cls(cls.ADVERB)
+            case "schwaches Verb":
+                return cls(cls.WEAK_VERB)
+            case "starkes Verb":
+                return cls(cls.STRONG_VERB)
+            case "unregelmäßiges Verb":
+                return cls(cls.IRREGULAR_VERB)
+            case "Partikel":
+                return cls(cls.PARTICLE)
+            case _:
+                raise NotImplementedError()
 
 
 @dataclass

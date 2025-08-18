@@ -7,7 +7,7 @@ platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
-editable = "pixi run pip install --editable --no-build-isolation ."
+editable = "pixi run pip install --no-build-isolation --editable ."
 
 [dependencies]
 python = ">=3.13"
@@ -26,5 +26,13 @@ pytest-cov = ">=6.2.1,<7"
 [feature.test.tasks]
 test = "pixi run -e test pytest"
 
+[feature.build.dependencies]
+python-build = "*"
+pip = "*"
+hatchling = "*"
+hatch-vcs = "*"
+
 [environments]
-test = ["test"]
+default = { features = ["test", "build"], solve-group = "default" }
+test = { features = ["test"], solve-group = "default" }
+build = { features = ["build"], solve-group = "default" }

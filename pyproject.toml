@@ -8,9 +8,6 @@ description = "An sdk for Duden API"
 authors = [
     { name = "Alexander Ivanov", email = "alexander.valentinov.ivanov@gmail.com" }
 ]
-maintaners = [
-    { name = "Alexander Ivanov", email = "alexander.valentinov.ivanov@gmail.com" }
-]
 readme = "README.md"
 dynamic = ["version"]
 classifiers = [
@@ -22,3 +19,9 @@ requires-python = ">=3.13"
 
 [project.urls]
 repository = "https://github.com/aivanoved/duden_sdk"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["duden_sdk"]

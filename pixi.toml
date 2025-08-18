@@ -8,6 +8,7 @@ version = "0.1.0"
 
 [tasks]
 editable = "pixi run pip install --no-build-isolation --editable ."
+duden = "pixi run -e default python duden_cli/cli.py"
 
 [dependencies]
 python = ">=3.13"

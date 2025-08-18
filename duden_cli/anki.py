@@ -19,12 +19,13 @@ model = genanki.Model(
         {"name": "Definition"},
         {"name": "Hint"},
         {"name": "Grammar"},
+        {"name": "Example"},
     ],
     templates=[
         {
             "name": "Simple German Definition",
             "qfmt": "{{Word}} {{Hint}}",
-            "afmt": '{{Word}}<hr id="answer">{{Grammar}}<hr>{{Definition}}',
+            "afmt": '{{Word}}<hr id="answer">{{Grammar}}<hr>{{Definition}}<hr>{{Example}}',
         },
         {
             "name": "Simple German Explain",

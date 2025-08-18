@@ -191,6 +191,21 @@ class SingleMeaning:
     meaning: str
     examples: list[str] | None = None
 
+    def example_table(self) -> str:
+        table = PrettyTable()
+
+        table.field_names = ["Beispiel(e)"]
+
+        for example in self.examples or list():
+            if len(table.rows) > 0:
+                table.add_divider()
+            table.add_row([example])
+
+        table.align = "l"
+        table.max_table_width = terminal_width() - 1
+
+        return table.get_string()
+
 
 @dataclass
 class Definition(Parse):
@@ -321,6 +336,35 @@ class Word:
     grammar: Grammar | None
     pronunciation: Pronunciation | None
 
+    def get_plural(self, *, grammar: Grammar | None = None) -> str | None:
+        if self.grammar is None and grammar is None:
+            return None
+
+        if grammar is None:
+            grammar = cast(Grammar, self.grammar)
+
+        if grammar.word_type not in [
+            WordType.NOUN_MASCULINE,
+            WordType.NOUN_FEMININE,
+            WordType.NOUN_NEUTRAL,
+            WordType.NOUN_MASCULINE_NEUTRAL,
+        ]:
+            return None
+
+        grammar_ = grammar.grammar
+        if isinstance(grammar_, list):
+            grammar_ = ([None] + [g for g in grammar_ if "Plural" in g])[-1]
+        if isinstance(grammar_, str) and "Plural: die" in grammar_:
+            return (
+                grammar_.split("Plural: die")[1]
+                .strip()
+                .lstrip()
+                .split()[0]
+                .strip()
+            )
+
+        return None
+
     def meaning_table(self: Self) -> str:
         data = [
             [
@@ -394,6 +438,23 @@ class Word:
                     if len(table.rows) > 0:
                         table.add_divider()
                     table.add_row(["Other", grammar_row])
+
+        table.align = "l"
+        table.max_table_width = terminal_width() - 1
+
+        return table.get_string()
+
+    def example_table(self, *, meaning: int = 0) -> str:
+        table = PrettyTable()
+
+        table.field_names = [
+            f"Beispiel(e) für {self.word} mit Bedeutung {meaning + 1}"
+        ]
+
+        for example in self.definition.definitions[meaning].examples or list():
+            if len(table.rows) > 0:
+                table.add_divider()
+            table.add_row([example])
 
         table.align = "l"
         table.max_table_width = terminal_width() - 1

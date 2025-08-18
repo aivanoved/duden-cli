@@ -150,7 +150,7 @@ def gen_deck() -> None:
                     and len(def_.examples) > 0
                 ):
                     idx = int(answer)
-                    while idx <= 0 or idx >= len(def_.examples):
+                    while idx <= 0 or idx - 1 >= len(def_.examples):
                         idx = int(
                             input(
                                 f"Enter a number between 1 and {len(def_.examples)}: "  # type: ignore

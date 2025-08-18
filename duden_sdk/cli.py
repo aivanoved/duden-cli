@@ -141,7 +141,7 @@ class Definition(Parse):
 
         meaning = cast(str, single_def.find('p').contents[0])
         examples = [clean_contents(e.find('dd'))[0].find_all('li') for e in single_def.find_all('dl') if 'Beispiel' in e.find('dt').contents[0]]
-        examples = [unicodedata.normalize('NFC', cast(str, clean_contents(e)[0])).replace(u'\xa0', u' ') for e in itertools.chain(*examples)]
+        examples = [unicodedata.normalize('NFC', ''.join(map(str, clean_contents(e)))).replace(u'\xa0', u' ') for e in itertools.chain(*examples)]
 
         definitions: list[SingleMeaning] = list()
         definitions.append(SingleMeaning(meaning, examples or None))

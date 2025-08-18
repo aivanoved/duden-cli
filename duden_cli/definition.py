@@ -1,4 +1,4 @@
-import itertools
+import re
 import unicodedata
 from dataclasses import dataclass
 from enum import Enum
@@ -13,6 +13,13 @@ URL = "https://www.duden.de/rechtschreibung/{word}"
 
 def clean_contents(element) -> list:
     return [e for e in element.contents if e != "\n"]
+
+
+def normal_markdown(element) -> str:
+    return cast(
+        str,
+        md(unicodedata.normalize("NFC", "".join(str(element))).replace("\xa0", " ")),
+    )
 
 
 class Parse:
@@ -111,7 +118,7 @@ class Pronunciation(Parse):
         ]
 
         ipas: list[str] = list()
-        guides: list[list[str]] = list()
+        guides: list[str] = list()
 
         spans = contents.find_all("span")
         for s in spans:
@@ -119,14 +126,9 @@ class Pronunciation(Parse):
             if class_ == "ipa":
                 ipas.append(unicodedata.normalize("NFC", clean_contents(s)[0]))
             elif class_ == "pronunciation-guide__text":
-                guides.append(clean_contents(s))
+                guides.append("".join([normal_markdown(e) for e in clean_contents(s)]))
 
-        guide_str: list[str] = list()
-
-        for e in (guides or [[]])[0]:
-            guide_str.append(md(unicodedata.normalize("NFC", str(e))))
-
-        return cls(stress="".join(guide_str), ipa=(ipas or [""])[0])
+        return cls(stress=(guides or [""])[0], ipa=(ipas or [""])[0])
 
     @classmethod
     @override
@@ -145,30 +147,44 @@ class Definition(Parse):
     definitions: list[SingleMeaning]
 
     @classmethod
+    def _get_examples(cls, definition) -> list[str] | None:
+        examples = [
+            clean_contents(e.find("dd"))[0].find_all("li")
+            for e in definition.find_all("dl")
+            if "Beispiel" in e.find("dt").contents[0]
+        ]
+
+        print(examples)
+
+        if len(examples) == 0:
+            return None
+
+        examples = [
+            normal_markdown("".join(map(str, clean_contents(e)))) for e in examples[0]
+        ]
+
+        return examples or None
+
+    @classmethod
     def _single_def(cls, single_def) -> Self | None:
         meaning = cast(str, single_def.find("p").contents[0])
-        examples = cast(
-            list[str],
-            [
-                clean_contents(e.find("dd"))[0].find_all("li")
-                for e in single_def.find_all("dl")
-                if "Beispiel" in e.find("dt").contents[0]
-            ],
-        )
-        examples = cast(
-            list[str],
-            [
-                md(
-                    unicodedata.normalize(
-                        "NFC", "".join(map(str, clean_contents(e)))
-                    ).replace("\xa0", " ")
-                )
-                for e in itertools.chain(*examples)
-            ],
-        )
 
         definitions: list[SingleMeaning] = list()
-        definitions.append(SingleMeaning(meaning, examples or None))
+        definitions.append(SingleMeaning(meaning, cls._get_examples(single_def)))
+
+        return cls(definitions)
+
+    @classmethod
+    def _multi_def(cls, multi_def) -> Self | None:
+        defs = [
+            clean_contents(e.find("div", {"class": "enumeration__text"}))
+            for e in multi_def.find_all("li", id=re.compile("Bedeutung*"))
+        ]
+
+        print(f"{defs=}")
+
+        definitions: list[SingleMeaning] = list()
+        # definitions.append(SingleMeaning(meaning, examples or None))
 
         return cls(definitions)
 
@@ -182,9 +198,11 @@ class Definition(Parse):
             return cls._single_def(single_def)
 
         multi_def = article.find("div", id="bedeutungen")
-        if single_def:
-            print(f"{multi_def=}")
-            raise NotImplementedError()
+
+        if multi_def:
+            # print(f"{definitions=}")
+            # raise NotImplementedError()
+            pass
 
         return None
 

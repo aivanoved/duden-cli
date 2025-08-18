@@ -298,19 +298,17 @@ def rechtschreibung(query: str) -> RechtschreibungLayout | None:
 
     soup = bs.BeautifulSoup(response.text, "html.parser")
 
-    hinweis = InformationCard.from_soup(soup)
+    information_card = InformationCard.from_soup(soup)
     rechtschreib = Rechtschreibung.from_soup(soup)
-    bedeutungen = Meaning.from_soup(soup)
+    meanings = Meaning.from_soup(soup)
 
     layout = RechtschreibungLayout(
-        information_card=hinweis,
+        information_card=information_card,
         rechtschreibung=rechtschreib,
-        meanings=bedeutungen,
+        meanings=meanings,
         synonyns=None,
         etymology=None,
         grammar=None,
     )
-
-    # pprint(layout)
 
     return layout

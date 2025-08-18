@@ -271,14 +271,22 @@ class Grammar(Parse):
 
         word_type = WordType.parse_tag(soup)
 
-        grammar = article.find("div", id="grammatik")
-        if grammar is None:
-            log.debug("unable to decode", definition=None)
+        if word_type is None:
+            log.debug("unable to decode", word_type=None)
             return None
+
+        grammar = None
+        _grammar = article.find("div", id="grammatik")
+        if _grammar is None:
+            log.debug("unable to decode", grammar=None)
+        else:
+            _grammar = _grammar.find_all("p")
+            if len(_grammar) > 0:
+                grammar = _grammar[0].contents
 
         return cls(
             word_type=word_type,
-            grammar="",
+            grammar=grammar,
         )
 
     @classmethod
@@ -320,7 +328,7 @@ class Word:
 
     def grammar_table(self: Self) -> str:
         table = PrettyTable()
-        table.field_names = ["Grammar", ""]
+        table.field_names = ["Grammatik", ""]
 
         if self.grammar is None:
             return table.get_string()
@@ -344,8 +352,24 @@ class Word:
                 table.add_row(["Worttyp", "Verb, starkes"])
             case WordType.IRREGULAR_VERB:
                 table.add_row(["Worttyp", "Verb, unregelmäßiges"])
+            case WordType.ADJECTIVE:
+                table.add_row(["Worttyp", "Adjektiv"])
+            case WordType.ADVERB:
+                table.add_row(["Worttyp", "Adverb"])
             case _:
                 pass
+
+        if self.grammar.grammar is not None:
+            grammar = self.grammar.grammar
+            if isinstance(grammar, str):
+                if len(table.rows) > 0:
+                    table.add_divider()
+                table.add_row(["Other", grammar])
+            else:
+                for grammar_row in grammar:
+                    if len(table.rows) > 0:
+                        table.add_divider()
+                    table.add_row(["Other", grammar_row])
 
         table.align = "l"
         table.max_table_width = terminal_width() - 1

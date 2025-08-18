@@ -14,12 +14,17 @@ DECK_ID = generate_valid_id()
 model = genanki.Model(
     model_id=MODEL_ID,
     name="Simple German Model",
-    fields=[{"name": "Word"}, {"name": "Definition"}, {"name": "Hint"}],
+    fields=[
+        {"name": "Word"},
+        {"name": "Definition"},
+        {"name": "Hint"},
+        {"name": "Grammar"},
+    ],
     templates=[
         {
             "name": "Simple German Definition",
             "qfmt": "{{Word}} {{Hint}}",
-            "afmt": '{{Word}}<hr id="answer">{{Definition}}',
+            "afmt": '{{Word}}<hr id="answer">{{Grammar}}<hr>{{Definition}}',
         },
         {
             "name": "Simple German Explain",

@@ -1,7 +1,7 @@
 import structlog
 import typer
 
-from duden_cli.definition import SingleMeaning, definition
+from duden_cli.definition import SingleMeaning, WordType, definition
 
 log = structlog.get_logger()
 
@@ -58,9 +58,59 @@ def gen_deck() -> None:
             if len(output.definition.definitions) > 1:
                 hint = hint or hint_from_definition(def_)
 
+            def get_plural(grammar: str | list[str] | None) -> str | None:
+                if isinstance(grammar, list):
+                    grammar = ([None] + [g for g in grammar if "Plural" in g])[-1]
+                if isinstance(grammar, str):
+                    if "Plural: die" in grammar:
+                        return (
+                            grammar.split("Plural: die")[1]
+                            .strip()
+                            .lstrip()
+                            .split()[0]
+                            .strip()
+                        )
+
+                return None
+
+            grammar = None
+            if output.grammar is None:
+                grammar = None
+            elif output.grammar.word_type is WordType.NOUN_MASCULINE:
+                grammar_list = ["Artikel - der"]
+                plural = get_plural(output.grammar.grammar)
+                if plural:
+                    grammar_list.append(f"die {plural}")
+
+                grammar = ", ".join(grammar_list)
+            elif output.grammar.word_type is WordType.NOUN_FEMININE:
+                grammar_list = ["Artikel - die"]
+                plural = get_plural(output.grammar.grammar)
+                if plural:
+                    grammar_list.append(f"die {plural}")
+
+                grammar = ", ".join(grammar_list)
+            elif output.grammar.word_type is WordType.NOUN_NEUTRAL:
+                grammar_list = ["Artikel - das"]
+                plural = get_plural(output.grammar.grammar)
+                if plural:
+                    grammar_list.append(f"die {plural}")
+
+                grammar = ", ".join(grammar_list)
+            elif output.grammar.word_type in [
+                WordType.WEAK_VERB,
+                WordType.STRONG_VERB,
+                WordType.IRREGULAR_VERB,
+            ]:
+                _grammar = output.grammar.grammar
+                if isinstance(_grammar, str):
+                    grammar = _grammar
+                elif isinstance(_grammar, list):
+                    grammar = ", ".join(_grammar)
+
             note = genanki.Note(
                 model=anki.model,
-                fields=[output.word, def_.meaning, hint or ""],
+                fields=[output.word, def_.meaning, hint or "", grammar or ""],
             )
 
             anki.deck.add_note(note)

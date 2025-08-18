@@ -5,13 +5,14 @@ from typing import Self, cast
 import bs4 as bs
 import httpx
 import structlog
-from bs4.element import PageElement
 
 from duden_cli.layout.html import (
     clean_page_elements,
-    delete_a,
+    clean_text,
+    delete_a_rule,
     dl,
     normalize_text,
+    strip_a_lexeme,
     strip_italic,
     strip_span,
 )
@@ -144,8 +145,6 @@ class Rechtschreibung:
 
         he = _extract_dl(cast(bs.BeautifulSoup, main_div))
 
-        log.debug(f"{he=}")
-
         return (
             cls(None, None)
             .hyphenation_from_tag(
@@ -171,30 +170,19 @@ class Rechtschreibung:
         if tag is None:
             return self
 
-        log.debug(f"{tag.contents=}")
+        preprocessors = [
+            strip_span,
+            strip_italic,
+            delete_a_rule,
+            strip_a_lexeme,
+        ]
 
-        simple_contents = tag.contents
+        examples = "".join(
+            clean_text(e, preprocessors=preprocessors) for e in tag.contents
+        ).split(";")
+        examples = [e.strip() for e in examples]
 
-        preprocessors = [strip_span, strip_italic, delete_a]
-
-        processed = True
-
-        while processed:
-            processed = False
-
-            for processor in preprocessors:
-                processed_elements = [processor(e) for e in simple_contents]
-
-                processed = processed or any(e[0] for e in processed_elements)
-
-                simple_contents = sum(
-                    (e[1] for e in processed_elements if e[1] is not None),
-                    cast(list[PageElement], list()),
-                )
-
-        log.debug(f"{simple_contents=}")
-
-        return self
+        return self.__class__(self.hyphenation, examples)
 
 
 @dataclass
@@ -203,6 +191,39 @@ class Bedeutung:
     beispiele: list[str] | None
     grammatik: str | None
     wendungen: list[str] | None
+
+    @classmethod
+    def from_soup(cls, soup: bs.BeautifulSoup) -> list[Self] | None:
+        article = soup.find("article")
+
+        single_div = article.find("div", attrs={"id": "bedeutung"})
+
+        if single_div is not None:
+            return cls.from_single(cast(bs.Tag, single_div))
+
+        return None
+
+    @classmethod
+    def from_single(cls, tag: bs.Tag) -> list[Self] | None:
+        log.debug(f"single example {tag=}")
+
+        preprocessors = [
+            strip_span,
+            strip_italic,
+            delete_a_rule,
+            strip_a_lexeme,
+        ]
+        meaning_tag = cast(bs.Tag, tag.find("p"))
+        meaning = "".join(
+            clean_text(e, preprocessors=preprocessors)
+            for e in meaning_tag.contents
+        )
+
+        return [cls(meaning, None, None, None)]
+
+    @classmethod
+    def from_many(cls, tag: bs.Tag) -> list[Self]:
+        raise NotImplementedError()
 
 
 @dataclass
@@ -230,8 +251,21 @@ def rechtschreibung(query: str) -> RechtschreibungLayout | None:
 
     hinweis = Hinweis.from_soup(soup)
     rechtschreib = Rechtschreibung.from_soup(soup)
+    bedeutungen = Bedeutung.from_soup(soup)
 
     log.debug(f"{hinweis=}")
     log.debug(f"{rechtschreib=}")
+    log.debug(f"{bedeutungen=}")
 
-    return None
+    layout = RechtschreibungLayout(
+        hinweis=hinweis,
+        rechtschreibung=rechtschreib,
+        bedeutungen=bedeutungen,
+        synonyme=None,
+        herkunft=None,
+        grammatik=None,
+    )
+
+    log.debug(f"{layout=}")
+
+    return layout

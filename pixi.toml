@@ -2,7 +2,7 @@
 authors = ["Alexander Ivanov <alexander.valentinov.ivanov@gmail.com>"]
 channels = ["conda-forge"]
 description = "An sdk for Duden API"
-name = "duden_sdk"
+name = "duden_cli"
 platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 

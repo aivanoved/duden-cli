@@ -3,7 +3,7 @@ requires = ["hatchling >= 1.26"]
 build-backen = "hatchling.build"
 
 [project]
-name = "duden_sdk"
+name = "duden_cli"
 description = "An sdk for Duden API"
 authors = [
     { name = "Alexander Ivanov", email = "alexander.valentinov.ivanov@gmail.com" }
@@ -24,4 +24,4 @@ repository = "https://github.com/aivanoved/duden_sdk"
 source = "vcs"
 
 [tool.hatch.build.targets.wheel]
-packages = ["duden_sdk"]
+packages = ["duden_cli"]

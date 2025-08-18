@@ -9,7 +9,7 @@ from rich.console import Console
 from duden_cli.definition import SingleMeaning, WordType, definition
 
 structlog.configure(
-    wrapper_class=structlog.make_filtering_bound_logger(logging.ERROR)
+    wrapper_class=structlog.make_filtering_bound_logger(logging.DEBUG)
 )
 
 log = structlog.get_logger()

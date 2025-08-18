@@ -1,7 +1,8 @@
 [default]
-extend-ignore-identifires-re = [
-    "(?Rm)^.*(#|//)\\s*spellchecker:disable-line$",
-    "(?s)(#|//)\\s*spellchecker:off.*?\\n\\s*(#|//)\\s*spellchecker:on"
+extend-ignore-re = [
+    "(?Rm)^.*(#|//)\\s*spellchecker:\\s*disable-line$",
+    "(?s)(#|//)\\s*spellchecker:\\s*off.*?\\n\\s*(#|//)\\s*spellchecker:\\s*on",
+    "(#|//)\\s*spellchecker:\\s*ignore-next-line\\n.*"
 ]
 [default.extend-words]
 oder = "oder"

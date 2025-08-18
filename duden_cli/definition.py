@@ -12,6 +12,8 @@ from markdownify import markdownify as md
 from rich.console import Console
 from rich.table import Table
 
+from duden_cli.layout.rechtschreibung import rechtschreibung
+
 log = structlog.get_logger()
 
 console = Console()
@@ -129,6 +131,8 @@ class WordType(Parse, Enum):
                 output = cls(cls.PARTICLE)
             case "Interjektion":
                 output = cls(cls.INTERJECTION)
+            case "Artikel":
+                output = cls(cls.ARTICLE)
             case _:
                 log.error("unable to decode", word_type=contents)
                 raise NotImplementedError()
@@ -437,6 +441,7 @@ def definition(word: str) -> Word | None:
     log.info("getting the definition of the word '%s'", word)
 
     response = httpx.get(DEFINITION_URL.format(word=word))
+    _ = rechtschreibung(word)
 
     log.info("got", response=response)
 

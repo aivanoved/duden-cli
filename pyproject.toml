@@ -34,7 +34,7 @@ testpaths = ["tests"]
 black = true # only sets the style options to the default values of black
 
 [tool.ruff]
-line-length = 88
+line-length = 79
 
 [tool.ruff.lint]
 ignore = [

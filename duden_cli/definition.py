@@ -37,7 +37,11 @@ def clean_tag(element):
 def normal_markdown(element) -> str:
     return cast(
         str,
-        md(unicodedata.normalize("NFC", "".join(str(element))).replace("\xa0", " ")),
+        md(
+            unicodedata.normalize("NFC", "".join(str(element))).replace(
+                "\xa0", " "
+            )
+        ),
     )
 
 
@@ -91,7 +95,10 @@ class WordType(Parse, Enum):
             return None
 
         contents = cast(
-            str, [e for e in word_type_tags[0].find("dd").contents if e != "\n"][-1]
+            str,
+            [e for e in word_type_tags[0].find("dd").contents if e != "\n"][
+                -1
+            ],
         )
 
         output = None
@@ -150,9 +157,9 @@ class Pronunciation(Parse):
         if len(pronunciation_tags) == 0:
             return None
 
-        contents = [e for e in pronunciation_tags[0].find("dd").contents if e != "\n"][
-            -1
-        ]
+        contents = [
+            e for e in pronunciation_tags[0].find("dd").contents if e != "\n"
+        ][-1]
 
         ipas: list[str] = list()
         guides: list[str] = list()
@@ -163,7 +170,9 @@ class Pronunciation(Parse):
             if class_ == "ipa":
                 ipas.append(unicodedata.normalize("NFC", clean_contents(s)[0]))
             elif class_ == "pronunciation-guide__text":
-                guides.append("".join([normal_markdown(e) for e in clean_contents(s)]))
+                guides.append(
+                    "".join([normal_markdown(e) for e in clean_contents(s)])
+                )
 
         output = cls(stress=(guides or [""])[0], ipa=(ipas or [""])[0])
 
@@ -199,7 +208,8 @@ class Definition(Parse):
             return None
 
         examples = [
-            normal_markdown("".join(map(str, clean_contents(e)))) for e in examples[0]
+            normal_markdown("".join(map(str, clean_contents(e))))
+            for e in examples[0]
         ]
 
         return examples or None
@@ -209,7 +219,9 @@ class Definition(Parse):
         meaning = cast(str, single_def.find("p").contents[0])
 
         definitions: list[SingleMeaning] = list()
-        definitions.append(SingleMeaning(meaning, cls._get_examples(single_def)))
+        definitions.append(
+            SingleMeaning(meaning, cls._get_examples(single_def))
+        )
 
         output = cls(definitions)
 
@@ -231,9 +243,13 @@ class Definition(Parse):
         if len(defs) != len(examples):
             raise ValueError()
 
-        defs_str = ["".join(clean_tag(def_element) for def_element in e) for e in defs]
+        defs_str = [
+            "".join(clean_tag(def_element) for def_element in e) for e in defs
+        ]
 
-        output = cls([SingleMeaning(dfn, exs) for dfn, exs in zip(defs_str, examples)])  # type: ignore
+        output = cls(
+            [SingleMeaning(dfn, exs) for dfn, exs in zip(defs_str, examples)]
+        )  # type: ignore
 
         log.debug("decoded object", definition=output)
 
@@ -310,14 +326,15 @@ class Word:
             [
                 e.meaning,
                 "\n".join(
-                    f"{i + 1}. {example}" for i, example in enumerate(e.examples or [])
+                    f"{i + 1}. {example}"
+                    for i, example in enumerate(e.examples or [])
                 ),
             ]
             for e in self.definition.definitions
         ]
 
         table = PrettyTable()
-        table.field_names = ["Bedeutung", "Beispiel(e)"]
+        table.field_names = [f"Bedeutung von {self.word}", "Beispiel(e)"]
 
         for row in data:
             table.add_row(row)
@@ -331,7 +348,7 @@ class Word:
 
     def grammar_table(self: Self) -> str:
         table = PrettyTable()
-        table.field_names = ["Grammatik", ""]
+        table.field_names = ["Grammatik", self.word]
 
         if self.grammar is None:
             return table.get_string()
@@ -396,6 +413,14 @@ def definition(word: str) -> Word | None:
         raise ValueError(f"'{word}' was not found or has multiple entries")
 
     soup = bs.BeautifulSoup(response.text, "html.parser")
+
+    word_contents = soup.find("div", {"class": "lemma"}).find_all("span")[0]
+    word = "".join(
+        unicodedata.normalize("NFC", e.replace("\xad", ""))
+        for e in word_contents.contents
+    )
+
+    log.info("The word is", word=word)
 
     grammar = Grammar.parse_tag(soup)
     definition = Definition.parse_tag(soup)

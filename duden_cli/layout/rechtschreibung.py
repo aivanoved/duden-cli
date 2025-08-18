@@ -40,7 +40,7 @@ def _extract_dl(soup: bs.BeautifulSoup) -> list[tuple[str, bs.Tag]]:
 
 
 @dataclass
-class Hinweis:
+class InformationCard:
     word: str
     word_type: str | None
     frequency: int | None
@@ -189,11 +189,11 @@ class Rechtschreibung:
 
 
 @dataclass
-class Bedeutung:
-    bedeutung: str
-    beispiele: list[str] | None
-    grammatik: str | None
-    wendungen: list[str] | None
+class Meaning:
+    meaning: str
+    examples: list[str] | None
+    grammar: str | None
+    uses: list[str] | None
 
     @classmethod
     def from_soup(cls, soup: bs.BeautifulSoup) -> list[Self] | None:
@@ -231,9 +231,7 @@ class Bedeutung:
             for example in values_unordered_list.find_all("li")
         ]
 
-        return self.__class__(
-            self.bedeutung, examples, self.grammatik, self.wendungen
-        )
+        return self.__class__(self.meaning, examples, self.grammar, self.uses)
 
     @classmethod
     def from_single(cls, tag: bs.Tag) -> list[Self] | None:
@@ -281,12 +279,12 @@ class Bedeutung:
 
 @dataclass
 class RechtschreibungLayout:
-    hinweis: Hinweis
+    information_card: InformationCard
     rechtschreibung: Rechtschreibung
-    bedeutungen: list[Bedeutung] | None
-    synonyme: list[str] | None
-    herkunft: str | None
-    grammatik: str | None
+    meanings: list[Meaning] | None
+    synonyns: list[str] | None
+    etymology: str | None
+    grammar: str | None
 
 
 def rechtschreibung(query: str) -> RechtschreibungLayout | None:
@@ -300,17 +298,17 @@ def rechtschreibung(query: str) -> RechtschreibungLayout | None:
 
     soup = bs.BeautifulSoup(response.text, "html.parser")
 
-    hinweis = Hinweis.from_soup(soup)
+    hinweis = InformationCard.from_soup(soup)
     rechtschreib = Rechtschreibung.from_soup(soup)
-    bedeutungen = Bedeutung.from_soup(soup)
+    bedeutungen = Meaning.from_soup(soup)
 
     layout = RechtschreibungLayout(
-        hinweis=hinweis,
+        information_card=hinweis,
         rechtschreibung=rechtschreib,
-        bedeutungen=bedeutungen,
-        synonyme=None,
-        herkunft=None,
-        grammatik=None,
+        meanings=bedeutungen,
+        synonyns=None,
+        etymology=None,
+        grammar=None,
     )
 
     # pprint(layout)

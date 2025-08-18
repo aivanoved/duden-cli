@@ -267,14 +267,14 @@ def definition(word: str) -> Word | None:
         log.error("unsuccessful")
         raise ValueError(f"'{word}' was not found or has multiple entries")
 
-    word = layout.hinweis.word
-    _definitions = layout.bedeutungen or []
+    word = layout.information_card.word
+    _definitions = layout.meanings or []
 
     definitions = Definition(
-        [SingleMeaning(e.bedeutung, e.beispiele) for e in _definitions]
+        [SingleMeaning(e.meaning, e.examples) for e in _definitions]
     )
 
-    grammar = Grammar(WordType.parse(layout.hinweis.word_type), None)
+    grammar = Grammar(WordType.parse(layout.information_card.word_type), None)
 
     output = Word(
         word=word,

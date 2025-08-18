@@ -20,23 +20,35 @@ def terminal_width() -> int:
     return size.columns
 
 
+def _extract_dl(soup: bs.BeautifulSoup) -> list[tuple[str, bs.Tag]]:
+    return list(
+        map(
+            dl,
+            [
+                cast(bs.BeautifulSoup, _dl)
+                for _dl in soup.find_all(name="dl", attrs={"class": "tuple"})
+            ],
+        )
+    )
+
+
 @dataclass
 class Hinweis:
-    wort: str
+    word: str
     word_type: str | None
     frequency: int | None
-    aussprache: str | None
+    pronunciation: str | None
 
     @classmethod
-    def new(cls, wort: str) -> Self:
-        return cls(wort, None, None, None)
+    def new(cls, word: str) -> Self:
+        return cls(word, None, None, None)
 
     def wordtype_from_tag(self, tag: bs.Tag | None) -> Self:
         return self.__class__(
-            self.wort,
+            self.word,
             cast(str, tag.contents[0]) if tag is not None else None,
             self.frequency,
-            self.aussprache,
+            self.pronunciation,
         )
 
     def frequency_from_tag(self, tag: bs.Tag | None) -> Self:
@@ -76,11 +88,84 @@ class Hinweis:
             frequency_int = 1
 
         return self.__class__(
-            self.wort,
+            self.word,
             self.word_type,
             frequency_int,
-            self.aussprache,
+            self.pronunciation,
         )
+
+    @classmethod
+    def from_soup(cls, soup: bs.BeautifulSoup) -> Self:
+        article = soup.find("article")
+
+        word = cast(
+            str,
+            article.find(name="div", attrs={"class": "lemma"})
+            .find(name="h1")
+            .find(name="span", attrs={"class": "lemma__main"})
+            .text,
+        )
+
+        wfp = _extract_dl(cast(bs.BeautifulSoup, article))[:3]
+
+        word_type = (
+            [e[1] for e in wfp if e[0].startswith("Wortart")] or [None]
+        )[0]
+        frequency = (
+            [e[1] for e in wfp if e[0].startswith("Häufigkeit")] or [None]
+        )[0]
+        # pronunciation = [e[1] for e in wfp if e[0].startswith("Aussprache")][0]
+
+        return (
+            cls.new(normalize_text(word))
+            .wordtype_from_tag(word_type)
+            .frequency_from_tag(frequency)
+        )
+
+
+@dataclass
+class Rechtschreibung:
+    hyphenation: str | None
+    examples: list[str] | None
+
+    @classmethod
+    def from_soup(cls, soup: bs.BeautifulSoup) -> Self:
+        article = soup.find("article")
+
+        main_div = article.find("div", attrs={"id": "rechtschreibung"})
+
+        log.debug(f"{main_div=}")
+
+        he = _extract_dl(cast(bs.BeautifulSoup, main_div))
+
+        log.debug(f"{he=}")
+
+        return (
+            cls(None, None)
+            .hyphenation_from_tag(
+                (
+                    [h[1] for h in he if h[0].startswith("Worttrennung")]
+                    or [None]
+                )[0]
+            )
+            .examples_from_tag(
+                ([h[1] for h in he if h[0].startswith("Beispiel")] or [None])[
+                    0
+                ]
+            )
+        )
+
+    def hyphenation_from_tag(self, tag: bs.Tag | None) -> Self:
+        if tag is None:
+            return self
+
+        return self.__class__(cast(str, tag.contents[0]), self.examples)
+
+    def examples_from_tag(self, tag: bs.Tag | None) -> Self:
+        if tag is None:
+            return self
+
+        return self
 
 
 @dataclass
@@ -89,12 +174,6 @@ class Bedeutung:
     beispiele: list[str] | None
     grammatik: str | None
     wendungen: list[str] | None
-
-
-@dataclass
-class Rechtschreibung:
-    worttrennung: str | None
-    beispiele: list[str] | None
 
 
 @dataclass
@@ -119,37 +198,11 @@ def rechtschreibung(query: str) -> RechtschreibungLayout | None:
         raise ValueError(f"'{query}' was not found or has multiple entries")
 
     soup = bs.BeautifulSoup(response.text, "html.parser")
-    article = soup.find("article")
 
-    word = cast(
-        str,
-        article.find(name="div", attrs={"class": "lemma"})
-        .find(name="h1")
-        .find(name="span", attrs={"class": "lemma__main"})
-        .text,
-    )
-
-    # spellchecker: off
-    wha = [
-        dl(_dl)
-        for _dl in article.find_all(name="dl", attrs={"class": "tuple"})[:3]  # pyright: ignore[reportUnknownVariableType]
-    ]
-
-    word_type = ([e[1] for e in wha if e[0].startswith("Wortart")] or [None])[
-        0
-    ]
-    frequency = (
-        [e[1] for e in wha if e[0].startswith("Häufigkeit")] or [None]
-    )[0]
-    # aussprache = [e[1] for e in wha if e[0].startswith("Aussprache")][0]
-    # spellchecker: on
-
-    hinweis = (
-        Hinweis.new(normalize_text(word))
-        .wordtype_from_tag(word_type)
-        .frequency_from_tag(frequency)
-    )
+    hinweis = Hinweis.from_soup(soup)
+    rechtschreib = Rechtschreibung.from_soup(soup)
 
     log.debug(f"{hinweis=}")
+    log.debug(f"{rechtschreib=}")
 
     return None

@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 import structlog
 import typer
 
@@ -5,11 +7,22 @@ from duden_cli.definition import SingleMeaning, WordType, definition
 
 log = structlog.get_logger()
 
-kwargs = {
-    "pretty_exceptions_enable": False,
-}
+cli = typer.Typer(pretty_exceptions_enable=False)
 
-cli = typer.Typer(**kwargs)
+
+def selector(
+    description: str, variants: list[str | Callable[[str], bool]]
+) -> str:
+    answer = None
+    variants_check: list[Callable[[str], bool]] = [
+        lambda x: x == e.lower() if isinstance(e, str) else e  # type: ignore
+        for e in variants
+    ]
+    while answer is None or not any(
+        check_variant(answer) for check_variant in variants_check
+    ):
+        answer = input(f"{description}:").strip().lower()
+    return answer
 
 
 @cli.command()
@@ -33,8 +46,9 @@ def hint_from_definition(definition: SingleMeaning) -> str:
     while input_ is None:
         print(f"Definition: {enumerated}")
 
-        input_ = input(
-            "Enter the number of the hint word, s for skip, n for new: "
+        input_ = selector(
+            "Enter the number of the hint word, s for skip, n for new: ",
+            ["s", "n"],
         )
         input_ = input_.strip().lower()
         if not (input_.isalpha() or input_.isdecimal()):

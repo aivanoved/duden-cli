@@ -201,11 +201,19 @@ class Bedeutung:
         if single_div is not None:
             return cls.from_single(cast(bs.Tag, single_div))
 
+        if multi_div is not None:
+            return cls.from_many(cast(bs.Tag, single_div))
+
         return None
 
-    @classmethod
-    def from_single(cls, tag: bs.Tag) -> list[Self] | None:
-        log.debug(f"single example {tag=}")
+    def examples_from_tag(self, tag: bs.Tag | None) -> Self:
+        if tag is None:
+            return self
+
+        if tag.name != "dl":
+            return self
+
+        dt = cast(bs.Tag, tag.find("dt"))
 
         preprocessors = [
             strip_span,
@@ -213,16 +221,62 @@ class Bedeutung:
             delete_a_rule,
             strip_a_lexeme,
         ]
-        meaning_tag = cast(bs.Tag, tag.find("p"))
+
+        dt_type = "".join(
+            clean_text(e, preprocessors=preprocessors) for e in dt.contents
+        )
+
+        if "Beispiel" not in dt_type:
+            return self
+
+        values_tag = cast(bs.Tag, tag.find("dd"))
+        values_unordered_list = cast(bs.Tag, values_tag.find("ul"))
+
+        examples = [
+            "".join(clean_text(e, preprocessors=preprocessors))
+            for example in values_unordered_list.find_all("li")
+            for e in cast(bs.Tag, example).contents
+        ]
+
+        return self.__class__(
+            self.bedeutung, examples, self.grammatik, self.wendungen
+        )
+
+    @classmethod
+    def from_single(cls, tag: bs.Tag) -> list[Self] | None:
+        preprocessors = [
+            strip_span,
+            strip_italic,
+            delete_a_rule,
+            strip_a_lexeme,
+        ]
+        meaning_tag = cast(bs.Tag | None, tag.find("p"))
+        if meaning_tag is None:
+            meaning_tag = cast(bs.Tag | None, tag.find("div"))
         meaning = "".join(
             clean_text(e, preprocessors=preprocessors)
             for e in meaning_tag.contents
         )
 
-        return [cls(meaning, None, None, None)]
+        dls = _extract_dl(cast(bs.BeautifulSoup, tag))
+
+        examples_tag = (
+            [e[1] for e in dls if e[0].startswith("Beispiel")] or [None]
+        )[0]
+
+        return [cls(meaning, None, None, None).examples_from_tag(examples_tag)]
 
     @classmethod
     def from_many(cls, tag: bs.Tag) -> list[Self]:
+        preprocessors = [
+            strip_span,
+            strip_italic,
+            delete_a_rule,
+            strip_a_lexeme,
+        ]
+
+        li_tags: list[bs.Tag] = list()
+
         raise NotImplementedError()
 
 

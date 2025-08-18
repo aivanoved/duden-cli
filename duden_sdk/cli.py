@@ -8,6 +8,7 @@ import typer
 import httpx
 import bs4 as bs
 from typing import Any, Self, cast, override
+from markdownify import markdownify as md
 
 cli = typer.Typer()
 
@@ -101,18 +102,15 @@ class Pronunciation(Parse):
         for s in spans:
             class_ = s['class'][0]
             if class_ == 'ipa':
-                ipas.append(s.contents[0])
+                ipas.append(unicodedata.normalize('NFC', clean_contents(s)[0]))
             elif class_ == 'pronunciation-guide__text':
-                guides.append(s.contents)
+                guides.append(clean_contents(s))
 
 
         guide_str: list[str] = list()
 
         for e in (guides or [[]])[0]:
-            if isinstance(e, bs.Tag):
-                guide_str.append("*" + str(e.contents[0]) + "*")
-            else:
-                guide_str.append(str(e))
+            guide_str.append(md(unicodedata.normalize('NFC', str(e))))
 
         return cls(stress=''.join(guide_str), ipa=(ipas or [''])[0])
 
@@ -141,7 +139,7 @@ class Definition(Parse):
 
         meaning = cast(str, single_def.find('p').contents[0])
         examples = [clean_contents(e.find('dd'))[0].find_all('li') for e in single_def.find_all('dl') if 'Beispiel' in e.find('dt').contents[0]]
-        examples = [unicodedata.normalize('NFC', ''.join(map(str, clean_contents(e)))).replace(u'\xa0', u' ') for e in itertools.chain(*examples)]
+        examples = [md(unicodedata.normalize('NFC', ''.join(map(str, clean_contents(e)))).replace(u'\xa0', u' ')) for e in itertools.chain(*examples)]
 
         definitions: list[SingleMeaning] = list()
         definitions.append(SingleMeaning(meaning, examples or None))

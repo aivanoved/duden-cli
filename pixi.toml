@@ -17,6 +17,7 @@ typer = ">=0.16.0,<0.17"
 httpx = ">=0.28.1,<0.29"
 pip = ">=25.1.1,<26"
 beautifulsoup4 = ">=4.13.4,<5"
+markdownify = ">=0.14.1,<0.15"
 
 
 [feature.test.dependencies]

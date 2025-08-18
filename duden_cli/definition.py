@@ -15,6 +15,12 @@ def clean_contents(element) -> list:
     return [e for e in element.contents if e != "\n"]
 
 
+def clean_tag(element):
+    if isinstance(element, bs.Tag):
+        return element.contents[0]
+    return element
+
+
 def normal_markdown(element) -> str:
     return cast(
         str,
@@ -70,7 +76,9 @@ class WordType(Parse, Enum):
         if len(word_type_tags) == 0:
             return None
 
-        contents = [e for e in word_type_tags[0].find("dd").contents if e != "\n"][-1]
+        contents = cast(
+            str, [e for e in word_type_tags[0].find("dd").contents if e != "\n"][-1]
+        )
 
         match contents:
             case "Substantiv, maskulin":
@@ -93,6 +101,10 @@ class WordType(Parse, Enum):
                 return cls(cls.PARTICLE)
             case _:
                 raise NotImplementedError()
+
+    @override
+    def __str__(self: Self) -> str:
+        return ""
 
 
 @dataclass
@@ -186,7 +198,9 @@ class Definition(Parse):
         if len(defs) != len(examples):
             raise ValueError()
 
-        return cls([SingleMeaning(dfn, exs) for dfn, exs in zip(defs, examples)])  # type: ignore
+        defs_str = ["".join(clean_tag(def_element) for def_element in e) for e in defs]
+
+        return cls([SingleMeaning(dfn, exs) for dfn, exs in zip(defs_str, examples)])  # type: ignore
 
     @classmethod
     @override
@@ -213,9 +227,36 @@ class Definition(Parse):
 @dataclass
 class Word:
     word: str
-    word_type: WordType
     definition: Definition
-    pronunciation: Pronunciation
+    word_type: WordType | None
+    pronunciation: Pronunciation | None
+
+    @override
+    def __str__(self: Self) -> str:
+        data = [
+            [
+                e.meaning,
+                "\n".join(
+                    f"{i + 1}. {example}" for i, example in enumerate(e.examples or [])
+                ),
+            ]
+            for e in self.definition.definitions
+        ]
+
+        from prettytable import PrettyTable
+
+        table = PrettyTable()
+        table.field_names = ["Bedeutung", "Beispiel(e)"]
+
+        for row in data:
+            table.add_row(row)
+            table.add_divider()
+
+        table.align = "l"
+
+        table.max_width = 90
+
+        return table.get_string()
 
 
 def definition(word: str) -> Word | None:
@@ -227,9 +268,18 @@ def definition(word: str) -> Word | None:
     word_type = WordType.parse_tag(soup)
     definition = Definition.parse_tag(soup)
 
-
-    if any(map(lambda e: e is None, [pronunciation, word_type])):
+    if definition is None:
         return None
 
+    output = Word(
+        word=word,
+        definition=definition,
+        word_type=word_type,
+        pronunciation=pronunciation,
+    )
 
-    return Word(word=word, word_type=word_type, definition=definition, pronunciation=pronunciation)  # type: ignore
+    output_str = str(output)
+
+    print(output_str)
+
+    return output

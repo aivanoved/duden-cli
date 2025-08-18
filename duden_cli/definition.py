@@ -12,7 +12,9 @@ from markdownify import markdownify as md
 
 log = structlog.get_logger()
 
-URL = "https://www.duden.de/rechtschreibung/{word}"
+DUDEN_BASE_URL = "https://www.duden.de"
+DEFINITION_URL = f"{DUDEN_BASE_URL}/rechtschreibung/{{word}}"
+SEARCH_URL = f"{DUDEN_BASE_URL}/suchen/dudenonline/{{word}}"
 
 
 def terminal_width() -> int:
@@ -294,7 +296,7 @@ class Word:
 def definition(word: str) -> Word | None:
     log.info("getting the definition of the word '%s'", word)
 
-    response = httpx.get(URL.format(word=word))
+    response = httpx.get(DEFINITION_URL.format(word=word))
 
     log.info("got", response=response)
 

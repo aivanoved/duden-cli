@@ -224,9 +224,11 @@ class Bedeutung:
         values_unordered_list = cast(bs.Tag, tag.find("ul"))
 
         examples = [
-            "".join(clean_text(e, preprocessors=preprocessors))
+            "".join(
+                normalize_text(clean_text(e, preprocessors=preprocessors))
+                for e in cast(bs.Tag, example).contents
+            )
             for example in values_unordered_list.find_all("li")
-            for e in cast(bs.Tag, example).contents
         ]
 
         return self.__class__(
@@ -248,9 +250,11 @@ class Bedeutung:
         if meaning_tag is None:
             return None
 
-        meaning = "".join(
-            clean_text(e, preprocessors=preprocessors)
-            for e in meaning_tag.contents
+        meaning = normalize_text(
+            "".join(
+                clean_text(e, preprocessors=preprocessors)
+                for e in meaning_tag.contents
+            )
         )
 
         dls = _extract_dl(cast(bs.BeautifulSoup, tag))

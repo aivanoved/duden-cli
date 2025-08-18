@@ -157,9 +157,9 @@ def gen_deck() -> None:
             word = input("Ask for word (q for quit): ")
             continue
 
-        for def_ in output.definition.definitions:
+        for def_ in output.definitions.definitions:
             hint = None
-            if len(output.definition.definitions) > 1:
+            if len(output.definitions.definitions) > 1:
                 hint = hint or hint_from_definition(def_)
             grammar = None
 

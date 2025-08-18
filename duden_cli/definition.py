@@ -193,7 +193,7 @@ class Word:
         for e in self.definitions.definitions:
             examples = "\n".join(
                 f"{i + 1}. {example}"
-                for i, example in enumerate(e.examples or [])
+                for i, example in enumerate((e.examples or [])[:10])
             )
             table.add_row(e.meaning, examples)
 

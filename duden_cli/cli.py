@@ -108,7 +108,7 @@ def hint_from_definition(definition: SingleMeaning) -> str:
 
     variants = SelectorOptionsStr(["s", "n"], hint="s for skip, n for new")
     variants_int = SelectorOptionsInt(
-        list(range(len(defined))), hint=f"1..{len(defined)}"
+        list(range(1, len(defined) + 1)), hint=f"1..{len(defined)}"
     )
 
     input_ = None
@@ -134,6 +134,8 @@ def hint_from_definition(definition: SingleMeaning) -> str:
                 hint = ""
             case "n":
                 hint = input("Enter a hint: ").strip()
+
+    hint = hint.strip(",").strip(";")
 
     return f"/{hint}/" if hint != "" else hint
 
@@ -219,7 +221,7 @@ def gen_deck() -> None:
                             ["s", "n"], hint="s for skip, n for new"
                         ),
                         SelectorOptionsInt(
-                            list(range(num_rows)), hint=f"1..{num_rows}"
+                            list(range(1, num_rows)), hint=f"1..{num_rows}"
                         ),
                     ),
                 )
@@ -245,7 +247,7 @@ def gen_deck() -> None:
         word = input("Ask for word (q for quit): ")
 
     genanki.Package(anki.deck).write_to_file(
-        f"Deutsch {anki.DATETIME_SUFFIX}.apkg"
+        f"Deutsch {anki.datetime_suffix()}.apkg"
     )
 
 

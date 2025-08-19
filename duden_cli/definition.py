@@ -192,7 +192,7 @@ class Word:
 
         for e in self.definitions.definitions:
             examples = "\n".join(
-                f"{i + 1}. {example}"
+                f"{i + 1}. {example.replace('[', '(').replace(']', ')')}"
                 for i, example in enumerate((e.examples or [])[:10])
             )
             table.add_row(e.meaning, examples)
@@ -253,7 +253,7 @@ class Word:
         for example in (
             self.definitions.definitions[meaning].examples or list()
         ):
-            table.add_row(example)
+            table.add_row(example.replace("[", "(").replace("]", ")"))
 
         return table
 

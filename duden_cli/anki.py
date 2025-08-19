@@ -35,6 +35,9 @@ model = genanki.Model(
     ],
 )
 
-DATETIME_SUFFIX = datetime.datetime.now().strftime("%d %B %Y %H:%M:%S")
 
-deck = genanki.Deck(deck_id=DECK_ID, name=f"German {DATETIME_SUFFIX}")
+def datetime_suffix() -> str:
+    return datetime.datetime.now().strftime("%d %B %Y %H:%M:%S")
+
+
+deck = genanki.Deck(deck_id=DECK_ID, name=f"German {datetime_suffix}")

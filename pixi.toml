@@ -1,13 +1,12 @@
 [project]
-authors = ["Alexander Ivanov <alexander.valentinov.ivanov@gmail.com>"]
+authors = ["Alexander Ivanov <54221777+aivanoved@users.noreply.github.com>"]
 channels = ["conda-forge"]
-description = "An sdk for Duden API"
-name = "duden_cli"
+name = "duden-cli"
 platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
-editable = "pixi run pip install --no-build-isolation --editable ."
+install-editable = "pixi run pip install --no-build-isolation --editable ."
 duden = "pixi run -e default python duden_cli/cli.py"
 
 [dependencies]
@@ -40,14 +39,13 @@ hatchling = "*"
 hatch-vcs = "*"
 
 [feature.lint.dependencies]
-docformatter = "*"
-ruff = "*"
-prettier = "*"
-taplo = "*"
+pre-commit = "*"
 pre-commit-hooks = "*"
+ruff = "*"
+mypy = "*"
+docformatter = "*"
+prettier = "*"
 typos = "*"
-pre-commit = ">=4.2.0,<5"
-mypy = ">=1.16.1,<2"
 
 [feature.lint.tasks]
 pre-commit-install = "pre-commit install"

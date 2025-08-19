@@ -1,27 +1,23 @@
 [build-system]
-requires = ["hatchling >= 1.26"]
-build-backen = "hatchling.build"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
-name = "duden_cli"
-description = "An sdk for Duden API"
 authors = [
-    { name = "Alexander Ivanov", email = "alexander.valentinov.ivanov@gmail.com" }
+    { name = "Alexander Ivanov", email = "54221777+aivanoved@users.noreply.github.com" }
 ]
-readme = "README.md"
+name = "duden-cli"
+requires-python = ">=3.13"
 dynamic = ["version"]
+readme = "README.md"
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.13",
 ]
-requires-python = ">=3.13"
 
 [project.urls]
-repository = "https://github.com/aivanoved/duden_sdk"
-
-[project.scripts]
-duden = "duden_cli.cli:cli"
+repository = "https://github.com/aivanoved/duden-cli"
 
 [tool.hatch.version]
 source = "vcs"

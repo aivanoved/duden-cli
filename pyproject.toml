@@ -19,6 +19,10 @@ classifiers = [
 [project.urls]
 repository = "https://github.com/aivanoved/duden-cli"
 
+
+[project.scripts]
+duden = "duden_cli.cli:cli"
+
 [tool.hatch.version]
 source = "vcs"
 

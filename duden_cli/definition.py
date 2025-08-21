@@ -130,10 +130,11 @@ class SingleMeaning:
 
     def example_table(self) -> Table:
         table = Table(title="Beispiel(e)", show_lines=True)
-        table.add_column("Beispiel(e)", justify="left")
+        table.add_column("Index", justify="left")
+        table.add_column("Beispiel", justify="left")
 
-        for example in self.examples or list():
-            table.add_row(example)
+        for idx, example in enumerate(self.examples or list()):
+            table.add_row(str(idx + 1), example)
 
         return table
 

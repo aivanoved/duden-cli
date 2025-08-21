@@ -128,7 +128,7 @@ def hint_from_definition(definition: SingleMeaning) -> str:
 
     input_ = None
 
-    console.print(f"Definition: {enumerated}")
+    console.print(f"Select hint: {enumerated}")
 
     input_ = cast(
         str | int,
@@ -174,7 +174,20 @@ def gen_deck() -> None:
             word = input("Ask for word (q for quit): ")
             continue
 
-        for def_ in output.definitions.definitions:
+        for def_idx, def_ in enumerate(output.definitions.definitions):
+            console.print(
+                f"Definition {def_idx + 1}/{len(output.definitions.definitions)}"
+            )
+            console.print(def_.meaning)
+
+            add_def = selector(
+                "Add this definition",
+                SelectorOptionsStr(["y", "s"], hint="y for yes, s for skip"),
+            )
+
+            if add_def == "s":
+                continue
+
             hint = None
             if len(output.definitions.definitions) > 1:
                 hint = hint or hint_from_definition(def_)

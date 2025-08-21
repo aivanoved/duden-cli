@@ -6,16 +6,31 @@ import structlog
 import typer
 from rich.console import Console
 
+from duden_cli.config import config
 from duden_cli.definition import SingleMeaning, WordType, definition
 
+log_level = logging.DEBUG
+
+match config.cli_verbosity:
+    case 1:
+        log_level = logging.ERROR
+    case 2:
+        log_level = logging.WARNING
+    case 3:
+        log_level = logging.INFO
+    case 4:
+        log_level = logging.DEBUG
+    case _:
+        log_level = logging.ERROR
+
+
 structlog.configure(
-    wrapper_class=structlog.make_filtering_bound_logger(logging.DEBUG)
+    wrapper_class=structlog.make_filtering_bound_logger(log_level)
 )
 
 log = structlog.get_logger()
 
 cli = typer.Typer(pretty_exceptions_enable=False)
-
 console = Console()
 
 T = TypeVar("T")

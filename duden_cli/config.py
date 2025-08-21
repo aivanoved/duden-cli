@@ -11,8 +11,8 @@ class Config(BaseSettings):
     api_key: str | None = Field(default=None)
 
     cli_verbosity: Annotated[
-        int, annotated_types.Ge(1), annotated_types.Le(5)
+        int, annotated_types.Ge(0), annotated_types.Le(3)
     ] = Field(default=3)
 
 
-config = Config()
+CONFIG = Config()

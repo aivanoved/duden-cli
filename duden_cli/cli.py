@@ -6,19 +6,19 @@ import structlog
 import typer
 from rich.console import Console
 
-from duden_cli.config import config
+from duden_cli.config import CONFIG
 from duden_cli.definition import SingleMeaning, WordType, definition
 
 log_level = logging.DEBUG
 
-match config.cli_verbosity:
-    case 1:
+match CONFIG.cli_verbosity:
+    case 0:
         log_level = logging.ERROR
-    case 2:
+    case 1:
         log_level = logging.WARNING
-    case 3:
+    case 2:
         log_level = logging.INFO
-    case 4:
+    case 3:
         log_level = logging.DEBUG
     case _:
         log_level = logging.ERROR
